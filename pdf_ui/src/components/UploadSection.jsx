@@ -51,27 +51,15 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
   const fileInputRef = useRef(null);
 
   const [selectedFile, setSelectedFile] = useState(null);
-  const [selectedFormat, setSelectedFormat] = useState(null);
+  const [selectedFormat, setSelectedFormat] = useState('pdf'); // Always use PDF format
   const [fileSizeMB, setFileSizeMB] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [formatAvailability, setFormatAvailability] = useState({ pdf: false, html: false });
-
-  // Check format availability on component mount
-  React.useEffect(() => {
-    const pdfValidation = validateFormatBucket('pdf');
-    const htmlValidation = validateFormatBucket('html');
-
-    setFormatAvailability({
-      pdf: pdfValidation.isConfigured,
-      html: htmlValidation.isConfigured
-    });
-  }, []);
 
   const resetFileInput = () => {
     setSelectedFile(null);
-    setSelectedFormat(null);
+    setSelectedFormat('pdf'); // Keep PDF format
     setFileSizeMB(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = null;
@@ -311,9 +299,10 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
   };
 
 
-  if (selectedFormat === 'pdf' || selectedFormat === 'html') {
-    const formatTitle = selectedFormat === 'pdf' ? 'PDF to PDF' : 'PDF to HTML';
-    const formatIcon = selectedFormat === 'pdf' ? imgFileText : imgCodeXml;
+  // Always use PDF format - no format selection needed
+  if (selectedFormat === 'pdf') {
+    const formatTitle = 'PDF Accessibility Remediation';
+    const formatIcon = imgFileText;
 
     if (selectedFile) {
       return (
@@ -415,9 +404,6 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
             )}
 
             <div className="upload-buttons">
-              <button className="change-format-btn" onClick={() => setSelectedFormat(null)}>
-                Change Output Format
-              </button>
               <button className="upload-btn" onClick={handleFileSelect} disabled={isUploading}>
                 {isUploading ? 'Uploading...' : 'Upload PDF'}
               </button>
@@ -444,81 +430,9 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
     );
   }
 
-  
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className="upload-container">
-        <div className="upload-content">
-          <div className="upload-header">
-            <div className="file-icon">
-              <img src={imgFileQuestion} alt="" />
-            </div>
-            <div className="upload-title">
-              <h2>Choose Output Format</h2>
-            </div>
-          </div>
 
-          <div className="format-options">
-            <div
-              className={`format-option ${selectedFormat === 'pdf' ? 'selected' : ''}`}
-              onClick={() => handleFormatSelect('pdf')}
-            >
-              <div className="format-header">
-                <div className="format-icon">
-                  <img src={imgFileText} alt="" />
-                </div>
-                <div className="format-info">
-                  <span className="format-name">PDF to PDF</span>
-                  <span className={`format-status ${formatAvailability.pdf ? 'available' : 'unavailable'}`}>
-                    {formatAvailability.pdf ? '✓ Available' : '⚠ Install Required'}
-                  </span>
-                </div>
-              </div>
-              <p className="format-description">
-                Improve accessibility and maintain document structure
-              </p>
-            </div>
-
-            <div
-              className={`format-option ${selectedFormat === 'html' ? 'selected' : ''}`}
-              onClick={() => handleFormatSelect('html')}
-            >
-              <div className="format-header">
-                <div className="format-icon">
-                  <img src={imgCodeXml} alt="" />
-                </div>
-                <div className="format-info">
-                  <span className="format-name">PDF to HTML</span>
-                  <span className={`format-status ${formatAvailability.html ? 'available' : 'unavailable'}`}>
-                    {formatAvailability.html ? '✓ Available' : '⚠ Install Required'}
-                  </span>
-                </div>
-              </div>
-              <p className="format-description">
-                Convert document to accessible HTML version
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Snackbar for error messages */}
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      >
-        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }} elevation={6} variant="filled">
-          {errorMessage}
-        </Alert>
-      </Snackbar>
-    </motion.div>
-  );
+  // This should never be reached since selectedFormat is always 'pdf'
+  return null;
 }
 
 export default UploadSection;

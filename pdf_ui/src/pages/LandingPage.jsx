@@ -7,9 +7,6 @@ import {
   Box,
   Typography,
   Link,
-  List,
-  ListItem,
-  ListItemIcon,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -21,7 +18,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 // MUI Icons
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import CloseIcon from '@mui/icons-material/Close';
 
 // Images
@@ -50,10 +46,6 @@ const StyledEmailLink = styled(Link)(({ theme }) => ({
     color: '#70122F',
     textDecoration: 'underline',
   },
-}));
-
-const SmallFiberManualRecordIcon = styled(FiberManualRecordIcon)(({ size }) => ({
-  fontSize: size || '8px',
 }));
 
 const GradientBox = styled(Box)(({ theme }) => ({
@@ -314,89 +306,6 @@ const LandingPage = () => {
             </StyledLink>
           </Box>
         </Box>
-      </Box>
-
-      {/* Thin Yellow Line */}
-      <Box
-        sx={{
-          height: '5px',
-          backgroundColor: '#FFC627',
-        }}
-      />
-
-      {/* Support Resources Section */}
-      <Box
-        sx={{
-          p: 4,
-          borderTop: '1px solid #ddd',
-          borderBottom: '1px solid #ddd',
-        }}
-      >
-        <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-          Support resources:
-        </Typography>
-        <List>
-          <ListItem disablePadding sx={{ mb: 1 }}>
-            <ListItemIcon sx={{ minWidth: '24px' }}>
-              <SmallFiberManualRecordIcon size="12px" sx={{ color: '#000000' }} />
-            </ListItemIcon>
-            <Typography variant="body1" component="h3">
-            Want a personalized demo of this solution? Have questions about your customer setup?{' '}
-              <StyledLink
-                href="https://aws.amazon.com/government-education/contact/"
-                target="_blank"
-                rel="noopener"
-                sx={{ ml: 0.5 }}
-              >
-                Contact AWS
-              </StyledLink>
-            </Typography>
-          </ListItem>
-          <ListItem disablePadding sx={{ mb: 1 }}>
-            <ListItemIcon sx={{ minWidth: '24px' }}>
-              <SmallFiberManualRecordIcon size="12px" sx={{ color: '#000000' }} />
-            </ListItemIcon>
-            <Typography variant="body1" component="h3">
-            Watch a recorded demo and review technical architecture:{' '}
-              <StyledLink
-                href="https://www.youtube.com/watch?v=Wl2Ut1AorLY"
-                target="_blank"
-                rel="noopener"
-                sx={{ ml: 0.5 }}
-              >
-                Watch Demo
-              </StyledLink>
-            </Typography>
-          </ListItem>
-          <ListItem disablePadding sx={{ mb: 1 }}>
-            <ListItemIcon sx={{ minWidth: '24px' }}>
-              <SmallFiberManualRecordIcon size="12px" sx={{ color: '#000000' }} />
-            </ListItemIcon>
-            <Typography variant="body1" component="h3">
-              This solution is available open source and can be added to your
-              AWS account for usage and testing.
-              <StyledLink
-                href="https://github.com/ASUCICREPO/PDF_Accessibility"
-                target="_blank"
-                rel="noopener"
-                sx={{ ml: 0.5 }}
-              >
-                Review documentation and access the GitHub repo.
-              </StyledLink>
-            </Typography>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemIcon sx={{ minWidth: '24px' }}>
-              <SmallFiberManualRecordIcon size="12px" sx={{ color: '#000000' }} />
-            </ListItemIcon>
-            <Typography variant="body1" component="h3">
-              Have questions about the AI CIC or need support? Email us:{' '}
-              <StyledEmailLink href="mailto:ai-cic@amazon.com">
-                ai-cic@amazon.com
-              </StyledEmailLink>
-            </Typography>
-          </ListItem>
-        </List>
       </Box>
 
       {/* About the AI CIC Section */}

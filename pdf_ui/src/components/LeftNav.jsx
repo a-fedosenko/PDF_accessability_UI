@@ -1,7 +1,6 @@
 import React from 'react';
-import { Drawer, Box, Typography, Card, CardContent, Divider, Link, IconButton, useMediaQuery, useTheme } from '@mui/material';
+import { Drawer, Box, Typography, Card, CardContent, Divider, IconButton, useMediaQuery, useTheme } from '@mui/material';
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner';
-import SupportIcon from '@mui/icons-material/Support';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
@@ -109,37 +108,6 @@ const LeftNav = ({ isCollapsed, setIsCollapsed, mobileOpen, setMobileOpen }) => 
         </Card>
         )}
 
-        {/* Support Resources Card - Hidden when collapsed on desktop, always shown on mobile */}
-        {(!isCollapsed || isMobile) && (
-          <Card
-            sx={{
-              borderRadius: 2,
-              boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-          <CardContent>
-            <Box display="flex" alignItems="center" marginBottom={2}>
-              <SupportIcon fontSize="large" color="secondary" />
-              <Typography variant="h6" fontWeight="bold" sx={{ marginLeft: 1 }}>
-                Support Resources
-              </Typography>
-            </Box>
-            <Divider sx={{ marginBottom: 2 }} />
-            <Typography variant="body2" gutterBottom>
-              This solution is available open source and can be added to your AWS account for usage and testing.
-              Review documentation and access the GitHub repo at:
-            </Typography>
-            <Typography variant="body2" gutterBottom>
-              <Link href="https://github.com/ASUCICREPO/PDF_Accessibility" target="_blank" rel="noopener noreferrer">
-                GitHub Repo
-              </Link>
-            </Typography>
-            <Typography variant="body2" gutterBottom>
-              Have questions or need support? Email us: <strong>ai-cic@amazon.com</strong>
-            </Typography>
-          </CardContent>
-        </Card>
-        )}
       </Box>
     </Drawer>
   );
