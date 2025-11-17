@@ -34,9 +34,9 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const [usageCount, setUsageCount] = useState(0);
   const [pdf2pdfCount, setPdf2pdfCount] = useState(0);
   const [pdf2htmlCount, setPdf2htmlCount] = useState(0);
-  const [maxFilesAllowed, setMaxFilesAllowed] = useState(3); // Default value
-  const [maxPagesAllowed, setMaxPagesAllowed] = useState(10); // Default value
-  const [maxSizeAllowedMB, setMaxSizeAllowedMB] = useState(25); // Default value
+  const [maxFilesAllowed, setMaxFilesAllowed] = useState(999999); // Default: unlimited (backend will override)
+  const [maxPagesAllowed, setMaxPagesAllowed] = useState(10000); // Default: 10000 pages (backend will override)
+  const [maxSizeAllowedMB, setMaxSizeAllowedMB] = useState(5120); // Default: 5GB (backend will override)
   const [loadingUsage, setLoadingUsage] = useState(false);
   const [usageError, setUsageError] = useState('');
 
@@ -117,9 +117,9 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
       setUsageCount(data.currentUsage ?? 0);
       setPdf2pdfCount(data.pdf2pdfCount ?? 0);
       setPdf2htmlCount(data.pdf2htmlCount ?? 0);
-      setMaxFilesAllowed(data.maxFilesAllowed ?? 3);
-      setMaxPagesAllowed(data.maxPagesAllowed ?? 10);
-      setMaxSizeAllowedMB(data.maxSizeAllowedMB ?? 25);
+      setMaxFilesAllowed(data.maxFilesAllowed ?? 999999);
+      setMaxPagesAllowed(data.maxPagesAllowed ?? 10000);
+      setMaxSizeAllowedMB(data.maxSizeAllowedMB ?? 5120);
 
     } catch (err) {
       setUsageError(`Failed to fetch usage: ${err.message}`);
