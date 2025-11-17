@@ -406,7 +406,6 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
 
             <div className="upload-instructions">
               <p className="upload-main-text">Drop your PDF here or click to browse</p>
-              <p className="upload-sub-text">Maximum file size: {maxSizeAllowedMB}MB • Maximum pages: {maxPagesAllowed}</p>
             </div>
 
             {errorMessage && (

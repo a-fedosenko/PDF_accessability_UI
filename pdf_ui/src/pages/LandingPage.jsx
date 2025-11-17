@@ -510,22 +510,13 @@ const LandingPage = () => {
       <strong>Please note the following restrictions before uploading:</strong>
     </Typography>
     <Typography variant="body2" component="p" paragraph>
-      1. Each user is limited to <strong>3</strong> PDF document uploads.
+      1. Do not upload documents containing sensitive information.
     </Typography>
     <Typography variant="body2" component="p" paragraph>
-      2. Documents cannot exceed <strong>10</strong> pages.
+      2. This solution only remediates PDF documents. Other document types will not be accepted.
     </Typography>
     <Typography variant="body2" component="p" paragraph>
-      3. Documents must be smaller than <strong>25</strong> MB.
-    </Typography>
-    <Typography variant="body2" component="p" paragraph>
-      4. Do not upload documents containing sensitive information.
-    </Typography>
-    <Typography variant="body2" component="p" paragraph>
-      5. This solution only remediates PDF documents. Other document types will not be accepted.
-    </Typography>
-    <Typography variant="body2" component="p" paragraph>
-      6. This solution does not remediate fillable forms or handle color selection/contrast.
+      3. This solution does not remediate fillable forms or handle color selection/contrast.
     </Typography>
     <Typography variant="body1" component="p" paragraph>
       This solution is <em>open source</em> and can be deployed in your

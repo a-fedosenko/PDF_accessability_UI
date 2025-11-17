@@ -233,11 +233,6 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
         }}>
           <Header
             handleSignOut={() => auth.removeUser()}
-            usageCount={usageCount}
-            refreshUsage={refreshUsage}
-            usageError={usageError}
-            loadingUsage={loadingUsage}
-            maxFilesAllowed={maxFilesAllowed}
             onMenuClick={() => setMobileNavOpen(true)}
           />
 
