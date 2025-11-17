@@ -20,23 +20,23 @@ GROUP_LIMITS = {
     'DefaultUsers': {
         # 'custom:first_sign_in': 'true',
         # 'custom:total_files_uploaded': '0',  # optionally reset
-        'custom:max_files_allowed': '3',
-        'custom:max_pages_allowed': '10',
-        'custom:max_size_allowed_MB': '25'
+        'custom:max_files_allowed': '999999',
+        'custom:max_pages_allowed': '10000',
+        'custom:max_size_allowed_MB': '5120'
     },
     'AmazonUsers': {
         # 'custom:first_sign_in': 'true',
         # 'custom:total_files_uploaded': '0',  # optionally reset
-        'custom:max_files_allowed': '5',
-        'custom:max_pages_allowed': '10',
-        'custom:max_size_allowed_MB': '25'
+        'custom:max_files_allowed': '999999',
+        'custom:max_pages_allowed': '10000',
+        'custom:max_size_allowed_MB': '5120'
     },
     'AdminUsers': {
         # 'custom:first_sign_in': 'true',
         # 'custom:total_files_uploaded': '0',  # optionally reset
-        'custom:max_files_allowed': '500',
-        'custom:max_pages_allowed': '1500',
-        'custom:max_size_allowed_MB': '1000'
+        'custom:max_files_allowed': '999999',
+        'custom:max_pages_allowed': '10000',
+        'custom:max_size_allowed_MB': '5120'
     }
 }
 
