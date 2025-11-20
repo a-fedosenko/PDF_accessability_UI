@@ -345,18 +345,6 @@ const LandingPage = () => {
     <Typography variant="body2" component="p" paragraph>
       3. This solution does not remediate fillable forms or handle color selection/contrast.
     </Typography>
-    <Typography variant="body1" component="p" paragraph>
-      This solution is <em>open source</em> and can be deployed in your
-      own AWS environment. Check out{' '}
-      <StyledLink
-                href="https://github.com/ASUCICREPO/PDF_Accessibility"
-                target="_blank"
-                rel="noopener"
-                sx={{ ml: 0.5 }}
-              >
-                Github
-      </StyledLink>
-    </Typography>
   </DialogContent>
 </Dialog>
     </Box>
