@@ -236,7 +236,9 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
             onMenuClick={() => setMobileNavOpen(true)}
           />
 
-          <FirstSignInDialog />
+          {/* DISABLE FIRST SIGN IN DETAILS
+          <FirstSignInDialog />*
+          /}
 
           {/* Deployment popup for bucket configuration - only shown when triggered */}
           {showDeploymentPopup && bucketValidation && (
