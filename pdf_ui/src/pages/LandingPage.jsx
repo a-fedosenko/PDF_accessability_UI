@@ -178,26 +178,15 @@ const LandingPage = () => {
             About this solution:
           </Typography>
           <Typography variant="body1" component="h3" paragraph>
-            This solution was created by the Arizona State University Artificial
-            Intelligence Cloud Innovation Center (AI CIC), powered by Amazon Web
-            Services (AWS), to tackle a significant challenge in the digital era:
+            This application was created to tackle a significant challenge in the digital era:
             improving the accessibility of digital document collections.
           </Typography>
           <Typography variant="body1" component="h3" paragraph>
-            With the Department of Justice’s April 2024 updates to how the
-            Americans with Disabilities Act (ADA) will be regulated, the AI CIC
-            developed a scalable open‐source solution that quickly and
-            efficiently brings PDF documents into compliance with WCAG 2.1 Level
-            AA standards. For bulk processing, 10 pages would cost approximately
-            $0.013 for AWS service costs + Adobe API costs.
-          </Typography>
-          <Typography variant="body1" component="h3" paragraph>
-            To test out this open‐source solution,{' '}
+            To start using this app,{' '}
             <Box component="span" sx={{ color: '#FFC627', fontWeight: 'bold' }}>
               click the button to the right
             </Box>{' '}
-            to briefly create an account, upload your document, and receive your
-            remediated PDF in return.
+            to upload your document, and receive your remediated PDF in return.
           </Typography>
 
           {/* Provided By Section */}
@@ -209,20 +198,8 @@ const LandingPage = () => {
             }}
           >
             <Typography variant="body1" component="h3" sx={{ mr: 1, fontWeight: 'bold' }}>
-              Provided by:
+              Provided by Logrus Global
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <img
-                src={asuLogo}
-                alt="ASU AI CIC Logo (white)"
-                style={{ height: 70, width: 'auto', marginRight: '16px' }}
-              />
-              <img
-                src={awsLogo}
-                alt="Powered by AWS logo (white)"
-                style={{ height: 40, width: 'auto' }}
-              />
-            </Box>
           </Box>
         </Box>
 
@@ -306,65 +283,6 @@ const LandingPage = () => {
             </StyledLink>
           </Box>
         </Box>
-      </Box>
-
-      {/* About the AI CIC Section */}
-      <Box
-        sx={{
-          p: 4,
-          backgroundColor: '#FAFAFA',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '-20%',
-            left: '-10%',
-            width: '120%',
-            height: '150%',
-            backgroundImage: `url(${bottomGradient})`,
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: 'cover',
-            transform: 'rotate(-15deg)',
-            opacity: 0.2,
-            zIndex: -1,
-          }}
-        />
-        <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-          About the AI CIC:
-        </Typography>
-        <Typography variant="body1" component="h3" paragraph>
-          The ASU Artificial Intelligence Cloud Innovation Center (AI CIC),
-          powered by AWS, is a no‐cost design thinking and rapid prototyping
-          shop dedicated to bridging the digital divide and driving innovation
-          in the nonprofit, healthcare, education, and government sectors.
-        </Typography>
-        <Typography variant="body1" component="h3" paragraph>
-          Our expert team harnesses Amazon’s pioneering approach to dive deep
-          into high-priority pain points, meticulously define challenges, and
-          craft strategic solutions. We collaborate with AWS solutions
-          architects and talented student workers to develop tailored
-          prototypes showcasing how advanced technology can tackle a wide
-          range of operational and mission-related challenges.
-        </Typography>
-        <Typography variant="body1" component="h3" paragraph>
-          Discover how we use technology to drive innovation. Visit our
-          website at{' '}
-          <StyledLink
-            href="https://smartchallenges.asu.edu/challenges/pdf-accessibility-ohio-state-university"
-            target="_blank"
-            rel="noopener"
-          >
-            AI CIC
-          </StyledLink>{' '}
-          or contact us directly at{' '}
-          <StyledEmailLink href="mailto:ai-cic@amazon.com">
-            ai-cic@amazon.com
-          </StyledEmailLink>
-          .
-        </Typography>
       </Box>
 
       {/* 
