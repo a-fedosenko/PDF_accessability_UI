@@ -163,7 +163,7 @@ echo "$FRONTEND_ENVIRONMENT" | jq .
 # Frontend buildspec
 FRONTEND_SOURCE='{
   "type":"GITHUB",
-  "location":"https://github.com/ASUCICREPO/PDF_accessability_UI.git",
+  "location":"https://github.com/a-fedosenko/PDF_accessability_UI.git",
   "buildspec":"buildspec-frontend.yml"
 }'
 
