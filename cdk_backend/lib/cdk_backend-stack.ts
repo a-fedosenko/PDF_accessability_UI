@@ -218,16 +218,15 @@ export class CdkBackendStack extends cdk.Stack {
       ]
     });
 
-    
 
-    // (Optional) If CfnManagedLoginBranding is not critical, remove it or put it in a separate stack
-    const managed_login = new cognito.CfnManagedLoginBranding(this, 'MyManagedLoginBranding', {
-      userPoolId: userPool.userPoolId,
-      clientId: userPoolClient.userPoolClientId,
-      returnMergedResources: true,
-      useCognitoProvidedValues: true,
-      
-    });
+
+    // Note: CfnManagedLoginBranding requires managedLoginVersion:2 on the UserPoolDomain,
+    // which is only valid for custom domains. Since we're using a Cognito prefix domain,
+    // we cannot use CfnManagedLoginBranding.
+    // If you need managed login branding, you must:
+    // 1. Use a custom domain with a valid SSL certificate
+    // 2. Set managedLoginVersion: 2 on the UserPoolDomain
+    // 3. Then add the CfnManagedLoginBranding resource
 
     // ------------- Identity Pool + IAM Roles for S3 Access --------------------
     const identityPool = new cognito.CfnIdentityPool(this, 'PDFIdentityPool', {
