@@ -6,6 +6,7 @@ import { Container, Box } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import Header from './components/Header';
 import UploadSection from './components/UploadSection';
+import AnalysisResultsSection from './components/AnalysisResultsSection';
 import ProcessingContainer from './components/ProcessingContainer';
 import ResultsContainer from './components/ResultsContainer';
 import LeftNav from './components/LeftNav';
@@ -17,6 +18,7 @@ import InformationBlurb from './components/InformationBlurb';
 import { Authority, CheckAndIncrementQuota } from './utilities/constants';
 import CustomCredentialsProvider from './utilities/CustomCredentialsProvider';
 import DeploymentPopup from './components/DeploymentPopup';
+import { pollForAnalysis } from './utilities/analysisService';
 
 function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const auth = useAuth();
@@ -28,6 +30,11 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [processedResult, setProcessedResult] = useState(null);
   const [processingStartTime, setProcessingStartTime] = useState(null);
+
+  // Analysis workflow states
+  const [analysisData, setAnalysisData] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState('');
  
 
   // Centralized Usage State
@@ -160,25 +167,66 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   };
 
   // Handle events from child components
-  const handleUploadComplete = (updated_filename, original_fileName, format = 'pdf') => {
+  const handleUploadComplete = async (updated_filename, original_fileName, format = 'pdf', jobId) => {
     console.log('Upload completed, new file name:', updated_filename);
     console.log('Original file name:', original_fileName);
     console.log('Selected format:', format);
+    console.log('Job ID for analysis:', jobId);
 
     const fileData = {
       name: original_fileName,
       updatedName: updated_filename,
       format: format,
+      jobId: jobId,
       size: 0 // We'll get this from the upload component if needed
     };
 
     setUploadedFile(fileData);
-    setProcessingStartTime(Date.now()); // Track when processing starts
-    setCurrentPage('processing');
+
+    // Start analysis polling for PDF format
+    if (format === 'pdf') {
+      setIsAnalyzing(true);
+      setAnalysisError('');
+      setCurrentPage('analyzing');
+
+      try {
+        console.log('Starting analysis polling for job:', jobId);
+        const analysis = await pollForAnalysis(jobId, awsCredentials);
+        console.log('Analysis received:', analysis);
+
+        setAnalysisData(analysis);
+        setCurrentPage('analysis-results');
+      } catch (error) {
+        console.error('Error during analysis:', error);
+        setAnalysisError(error.message || 'Failed to analyze PDF. Please try again.');
+        setCurrentPage('upload');
+      } finally {
+        setIsAnalyzing(false);
+      }
+    } else {
+      // For HTML format, skip analysis and go straight to processing
+      setProcessingStartTime(Date.now());
+      setCurrentPage('processing');
+    }
 
     // After a successful upload (and increment usage),
     // refresh usage so the new count shows up
     refreshUsage();
+  };
+
+  // Handle user starting remediation after seeing analysis
+  const handleStartRemediation = (analysis) => {
+    console.log('Starting remediation for analyzed PDF:', analysis);
+    setProcessingStartTime(Date.now());
+    setCurrentPage('processing');
+  };
+
+  // Handle user canceling after seeing analysis
+  const handleCancelAnalysis = () => {
+    console.log('User canceled after analysis');
+    setAnalysisData(null);
+    setCurrentPage('upload');
+    setUploadedFile(null);
   };
 
   const handleProcessingComplete = (result) => {
@@ -196,6 +244,9 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     setUploadedFile(null);
     setProcessedResult(null);
     setProcessingStartTime(null);
+    setAnalysisData(null);
+    setIsAnalyzing(false);
+    setAnalysisError('');
   };
 
   // Handle authentication loading and errors
@@ -267,6 +318,32 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
                 setUsageCount={setUsageCount}
                 isFileUploaded={!!uploadedFile}
                 onShowDeploymentPopup={handleShowDeploymentPopup}
+              />
+            )}
+
+            {currentPage === 'analyzing' && (
+              <Box sx={{ textAlign: 'center', padding: 4 }}>
+                <h2>Analyzing your PDF...</h2>
+                <p>Please wait while we analyze the document structure and estimate processing costs.</p>
+                <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 2 }}>
+                  <div className="spinner" style={{
+                    border: '4px solid #f3f3f3',
+                    borderTop: '4px solid #FFC627',
+                    borderRadius: '50%',
+                    width: '50px',
+                    height: '50px',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
+                </Box>
+              </Box>
+            )}
+
+            {currentPage === 'analysis-results' && analysisData && (
+              <AnalysisResultsSection
+                analysis={analysisData}
+                onStartProcessing={handleStartRemediation}
+                onCancel={handleCancelAnalysis}
+                idToken={auth.user?.id_token}
               />
             )}
 

@@ -67,6 +67,10 @@ export const IndentityPoolId = process.env.REACT_APP_IDENTITY_POOL_ID;
 export const FirstSignInAPI = process.env.REACT_APP_UPDATE_FIRST_SIGN_IN;
 export const CheckAndIncrementQuota = process.env.REACT_APP_UPLOAD_QUOTA_API;
 
+// Pre-processing Analysis API
+export const StartRemediationAPI = process.env.REACT_APP_START_REMEDIATION_API || 'https://your-api-url/start-remediation';
+export const PendingJobsTableName = process.env.REACT_APP_PENDING_JOBS_TABLE || 'pdf-accessibility-pending-jobs';
+
 export const UserPoolClientId = process.env.REACT_APP_USER_POOL_CLIENT_ID;
 export const UserPoolId = process.env.REACT_APP_USER_POOL_ID;
 

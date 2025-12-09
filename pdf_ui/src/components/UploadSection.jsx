@@ -260,8 +260,9 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       const uniqueFilename = `${sanitizedEmail}_${timestamp}_${sanitizedFileName}`; // Combined unique filename
 
       // Select bucket and directory based on format
+      // NOTE: Changed to pdf-upload/ for pre-processing analysis
       const selectedBucket = selectedFormat === 'html' ? HTMLBucket : PDFBucket;
-      const keyPrefix = selectedFormat === 'html' ? 'uploads/' : 'pdf/';
+      const keyPrefix = selectedFormat === 'html' ? 'uploads/' : 'pdf-upload/';
 
 
       const params = {
@@ -275,8 +276,11 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
 
       console.log('Upload complete, new file name:', uniqueFilename);
 
-      // **6. Notify Parent of Completion with format**
-      onUploadComplete(uniqueFilename, sanitizedFileName, selectedFormat || 'pdf');
+      // Generate job_id (filename_timestamp) for analysis polling
+      const jobId = `${sanitizedFileName}_${timestamp}`;
+
+      // **6. Notify Parent of Completion with format and job_id**
+      onUploadComplete(uniqueFilename, sanitizedFileName, selectedFormat || 'pdf', jobId);
 
       // **7. Refresh Usage**
       if (onUsageRefresh) {
