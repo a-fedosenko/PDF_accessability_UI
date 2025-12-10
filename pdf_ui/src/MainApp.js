@@ -250,6 +250,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     const interval = setInterval(async () => {
       try {
         const encodedJobId = encodeURIComponent(jobId);
+        console.log('Polling URL:', `${GetJobEndpoint}/${encodedJobId}`);
         const response = await fetch(`${GetJobEndpoint}/${encodedJobId}`, {
           headers: {
             Authorization: `Bearer ${auth.user?.id_token}`
@@ -257,7 +258,11 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
         });
 
         if (!response.ok) {
-          console.error('Failed to fetch job status');
+          const errorText = await response.text();
+          console.error('Failed to fetch job status. Status:', response.status);
+          console.error('Response body:', errorText);
+          console.error('Job ID:', jobId);
+          console.error('Encoded Job ID:', encodedJobId);
           return;
         }
 
