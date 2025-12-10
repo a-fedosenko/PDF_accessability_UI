@@ -460,6 +460,17 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     setAnalysisData(null);
     setIsAnalyzing(false);
     setAnalysisError('');
+    setCurrentJob(null);
+    setJobStatus(null);
+  };
+
+  // FUNCTION: Handle cancel from file-actions page
+  const handleCancelFileActions = () => {
+    console.log('User canceled from file-actions page');
+    setCurrentPage('upload');
+    setUploadedFile(null);
+    setCurrentJob(null);
+    setJobStatus(null);
   };
 
   // Handle authentication loading and errors
@@ -539,6 +550,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
                 jobData={currentJob}
                 onCheckFile={handleCheckFile}
                 onStartProcessing={handleStartProcessingFromFileActions}
+                onCancel={handleCancelFileActions}
                 enableAnalysis={EnablePreAnalysis}
                 loading={false}
               />
