@@ -2,6 +2,7 @@ import json
 import boto3
 import os
 from decimal import Decimal
+from urllib.parse import unquote
 
 dynamodb = boto3.resource('dynamodb')
 
@@ -20,10 +21,19 @@ def handler(event, context):
     Get a specific job by job_id
     Validates that the requesting user owns the job
     """
+    # Print entire event for debugging
+    print("=== GET JOB LAMBDA INVOKED ===")
+    print(f"Full event: {json.dumps(event, default=str)}")
+
     try:
         # Extract job_id from path parameters
         path_params = event.get('pathParameters') or {}
-        job_id = path_params.get('job_id')
+        job_id_raw = path_params.get('job_id')
+        # URL decode the job_id (API Gateway doesn't decode path parameters)
+        job_id = unquote(job_id_raw) if job_id_raw else None
+        print(f"pathParameters: {path_params}")
+        print(f"Raw job_id: {repr(job_id_raw)}")
+        print(f"Decoded job_id: {repr(job_id)}")
 
         if not job_id:
             return {
@@ -51,9 +61,13 @@ def handler(event, context):
             }
 
         print(f"Fetching job {job_id} for user {user_sub}")
+        print(f"Job ID type: {type(job_id)}, Job ID repr: {repr(job_id)}")
+        print(f"Job ID length: {len(job_id)}")
 
         # Get job from DynamoDB
+        print(f"Querying DynamoDB with Key: {{'job_id': {repr(job_id)}}}")
         response = table.get_item(Key={'job_id': job_id})
+        print(f"DynamoDB response: {response}")
 
         if 'Item' not in response:
             return {
@@ -62,7 +76,13 @@ def handler(event, context):
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
                 },
-                'body': json.dumps({'error': 'Job not found'})
+                'body': json.dumps({
+                    'error': 'Job not found',
+                    'job_id_received': job_id,
+                    'job_id_length': len(job_id),
+                    'job_id_repr': repr(job_id),
+                    'user_sub': user_sub
+                })
             }
 
         job = response['Item']

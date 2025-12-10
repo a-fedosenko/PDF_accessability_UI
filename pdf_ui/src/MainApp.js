@@ -50,6 +50,8 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const [currentJob, setCurrentJob] = useState(null);
   const [jobStatus, setJobStatus] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
+  const [pollingError, setPollingError] = useState(null);
+  const [failedJobId, setFailedJobId] = useState(null);
 
   // Centralized Usage State
   const [usageCount, setUsageCount] = useState(0);
@@ -246,6 +248,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     }
 
     console.log('Starting polling for job:', jobId);
+    setPollingError(null); // Clear any previous errors
 
     const interval = setInterval(async () => {
       try {
@@ -263,6 +266,13 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
           console.error('Response body:', errorText);
           console.error('Job ID:', jobId);
           console.error('Encoded Job ID:', encodedJobId);
+
+          // Stop polling on error
+          clearInterval(interval);
+          setPollingInterval(null);
+          setPollingError(`Failed to fetch job status (${response.status})`);
+          setFailedJobId(jobId);
+          setCurrentPage('error');
           return;
         }
 
@@ -486,6 +496,27 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     setJobStatus(null);
   };
 
+  // FUNCTION: Handle retry after polling error
+  const handleRetryPolling = () => {
+    console.log('Retrying polling for job:', failedJobId);
+    setPollingError(null);
+    setCurrentPage('analyzing'); // or 'processing' depending on context
+    if (failedJobId) {
+      startPollingJob(failedJobId);
+    }
+  };
+
+  // FUNCTION: Handle remove job after polling error
+  const handleRemoveJob = () => {
+    console.log('Removing failed job:', failedJobId);
+    setPollingError(null);
+    setFailedJobId(null);
+    setCurrentJob(null);
+    setJobStatus(null);
+    setUploadedFile(null);
+    setCurrentPage('upload');
+  };
+
   // Handle authentication loading and errors
   if (auth.isLoading) {
     return <div>Loading...</div>;
@@ -625,6 +656,87 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
               />
             )}
 
+            {currentPage === 'error' && pollingError && (
+              <Box sx={{
+                textAlign: 'center',
+                padding: 4,
+                backgroundColor: 'white',
+                borderRadius: 2,
+                boxShadow: 1,
+                maxWidth: '600px',
+                margin: '40px auto'
+              }}>
+                <Box sx={{
+                  fontSize: '48px',
+                  marginBottom: 2,
+                  color: '#dc2626'
+                }}>⚠️</Box>
+                <h2 style={{ color: '#1f2937', marginBottom: '16px' }}>Job Status Error</h2>
+                <p style={{
+                  color: '#6b7280',
+                  marginBottom: '24px',
+                  fontSize: '16px'
+                }}>
+                  {pollingError}
+                </p>
+                <p style={{
+                  color: '#6b7280',
+                  marginBottom: '32px',
+                  fontSize: '14px'
+                }}>
+                  Job ID: <code style={{
+                    backgroundColor: '#f3f4f6',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontFamily: 'monospace'
+                  }}>{failedJobId}</code>
+                </p>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                  <button
+                    onClick={handleRetryPolling}
+                    style={{
+                      backgroundColor: '#8c1d40',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 32px',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#6d1630'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#8c1d40'}
+                  >
+                    Retry
+                  </button>
+                  <button
+                    onClick={handleRemoveJob}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      color: '#374151',
+                      border: '1px solid #d1d5db',
+                      padding: '12px 32px',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#f9fafb';
+                      e.target.style.borderColor = '#9ca3af';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = '#ffffff';
+                      e.target.style.borderColor = '#d1d5db';
+                    }}
+                  >
+                    Remove & Start Over
+                  </button>
+                </Box>
+              </Box>
+            )}
 
           </Container>
 

@@ -272,9 +272,21 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       const selectedBucket = selectedFormat === 'html' ? HTMLBucket : PDFBucket;
       const keyPrefix = `uploads/${userSub}/`;
 
-      // Generate job_id (filename_timestamp) for job tracking
-      const jobId = `${sanitizedFileName.replace('.pdf', '')}_${timestamp}`;
+      // Generate unique job_id using timestamp and random suffix for uniqueness
+      // Replace spaces and special characters with underscores to ensure URL-safety
+      const baseFileName = sanitizedFileName.replace('.pdf', '').replace(/[^a-zA-Z0-9]/g, '_');
+      const randomSuffix = Math.random().toString(36).substring(2, 8); // 6-char random string
+      const jobId = `${baseFileName}_${timestamp}_${randomSuffix}`;
       const s3Key = `${keyPrefix}${jobId}.pdf`;
+
+      console.log('=== JOB ID GENERATION ===');
+      console.log('Original file name:', file.name);
+      console.log('Sanitized file name:', sanitizedFileName);
+      console.log('Base file name:', baseFileName);
+      console.log('Timestamp:', timestamp);
+      console.log('Random suffix:', randomSuffix);
+      console.log('Final job_id:', jobId);
+      console.log('S3 key:', s3Key);
 
       const params = {
         Bucket: selectedBucket,

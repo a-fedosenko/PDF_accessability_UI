@@ -2,6 +2,7 @@ import json
 import boto3
 import os
 from datetime import datetime
+from urllib.parse import unquote
 
 dynamodb = boto3.resource('dynamodb')
 
@@ -17,7 +18,9 @@ def handler(event, context):
     try:
         # Parse request body
         body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
-        job_id = body.get('job_id')
+        job_id_raw = body.get('job_id')
+        # URL decode the job_id in case it's encoded
+        job_id = unquote(job_id_raw) if job_id_raw else None
 
         if not job_id:
             return {
