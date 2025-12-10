@@ -9,7 +9,15 @@ import imgFileText from '../assets/pdf-icon.svg';
 import imgCodeXml from '../assets/pdf-html.svg';
 import './UploadSection.css';
 
-import { region, PDFBucket, HTMLBucket, CheckAndIncrementQuota, validateBucketConfiguration, validateFormatBucket } from '../utilities/constants';
+import {
+  region,
+  PDFBucket,
+  HTMLBucket,
+  CheckAndIncrementQuota,
+  CreateJobEndpoint,
+  validateBucketConfiguration,
+  validateFormatBucket
+} from '../utilities/constants';
 
 function sanitizeFilename(filename, format = 'pdf') {
   // Normalize the filename to decompose accented characters
@@ -260,34 +268,65 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       const uniqueFilename = `${sanitizedEmail}_${timestamp}_${sanitizedFileName}`; // Combined unique filename
 
       // Select bucket and directory based on format
-      // NOTE: Changed to pdf-upload/ for pre-processing analysis
+      // NOTE: Changed to uploads/ for stateful job tracking
       const selectedBucket = selectedFormat === 'html' ? HTMLBucket : PDFBucket;
-      const keyPrefix = selectedFormat === 'html' ? 'uploads/' : 'pdf-upload/';
+      const keyPrefix = `uploads/${userSub}/`;
 
+      // Generate job_id (filename_timestamp) for job tracking
+      const jobId = `${sanitizedFileName.replace('.pdf', '')}_${timestamp}`;
+      const s3Key = `${keyPrefix}${jobId}.pdf`;
 
       const params = {
         Bucket: selectedBucket,
-        Key: `${keyPrefix}${uniqueFilename}`,
+        Key: s3Key,
         Body: file,
       };
 
       const command = new PutObjectCommand(params);
       await client.send(command);
 
-      console.log('Upload complete, new file name:', uniqueFilename);
+      console.log('Upload complete, S3 key:', s3Key);
 
-      // Generate job_id (filename_timestamp) for analysis polling
-      const jobId = `${sanitizedFileName}_${timestamp}`;
+      // **6. Create job record in DynamoDB**
+      if (CreateJobEndpoint) {
+        try {
+          const jobResponse = await fetch(CreateJobEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              job_id: jobId,
+              user_sub: userSub,
+              user_email: auth.user?.profile?.email,
+              file_name: sanitizedFileName,
+              s3_key: s3Key,
+              s3_bucket: selectedBucket,
+              file_size_bytes: file.size
+            })
+          });
 
-      // **6. Notify Parent of Completion with format and job_id**
+          if (!jobResponse.ok) {
+            console.error('Failed to create job record:', await jobResponse.text());
+          } else {
+            console.log('Job record created successfully');
+          }
+        } catch (error) {
+          console.error('Error creating job record:', error);
+          // Continue anyway - don't fail the upload
+        }
+      }
+
+      // **7. Notify Parent of Completion with format and job_id**
       onUploadComplete(uniqueFilename, sanitizedFileName, selectedFormat || 'pdf', jobId);
 
-      // **7. Refresh Usage**
+      // **8. Refresh Usage**
       if (onUsageRefresh) {
         onUsageRefresh();
       }
 
-      // **8. Don't reset automatically - let parent component handle flow**
+      // **9. Don't reset automatically - let parent component handle flow**
     } catch (error) {
       console.error('Error uploading file:', error);
       setErrorMessage('Error uploading file. Please try again.');

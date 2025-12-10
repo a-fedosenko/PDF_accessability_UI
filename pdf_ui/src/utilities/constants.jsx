@@ -71,6 +71,15 @@ export const CheckAndIncrementQuota = process.env.REACT_APP_UPLOAD_QUOTA_API;
 export const StartRemediationAPI = process.env.REACT_APP_START_REMEDIATION_API || 'https://your-api-url/start-remediation';
 export const PendingJobsTableName = process.env.REACT_APP_PENDING_JOBS_TABLE || 'pdf-accessibility-pending-jobs';
 
+// Job Management API Endpoints
+export const CreateJobEndpoint = process.env.REACT_APP_CREATE_JOB_API;
+export const AnalyzeJobEndpoint = process.env.REACT_APP_ANALYZE_JOB_API;
+export const StartProcessingEndpoint = process.env.REACT_APP_START_PROCESSING_API;
+export const GetUserJobsEndpoint = process.env.REACT_APP_GET_USER_JOBS_API;
+export const GetJobEndpoint = process.env.REACT_APP_GET_JOB_API;
+export const JobsTableName = process.env.REACT_APP_JOBS_TABLE_NAME;
+export const EnablePreAnalysis = process.env.REACT_APP_ENABLE_PRE_ANALYSIS === 'true';
+
 export const UserPoolClientId = process.env.REACT_APP_USER_POOL_CLIENT_ID;
 export const UserPoolId = process.env.REACT_APP_USER_POOL_ID;
 
