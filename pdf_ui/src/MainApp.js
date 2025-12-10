@@ -262,6 +262,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
         const job = await response.json();
         console.log('Job status update:', job);
+        console.log('Current job status:', job.status);
 
         setCurrentJob(job);
         setJobStatus(job.status);
@@ -274,12 +275,17 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
           // Update UI page
           if (job.status === 'ANALYSIS_COMPLETE') {
+            console.log('Analysis complete! Setting analysisData and changing to analysis-results page');
+            console.log('Analysis data:', job);
             setAnalysisData(job);
             setCurrentPage('analysis-results');
+            console.log('Page changed to: analysis-results');
           } else if (job.status === 'COMPLETED') {
+            console.log('Processing complete! Changing to results page');
             setProcessedResult({ url: job.processed_s3_key });
             setCurrentPage('results');
           } else if (job.status === 'FAILED') {
+            console.log('Job failed:', job.error_message);
             setAnalysisError(job.error_message || 'Processing failed');
             setCurrentPage('upload');
           }

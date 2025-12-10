@@ -319,14 +319,18 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       }
 
       // **7. Notify Parent of Completion with format and job_id**
-      onUploadComplete(uniqueFilename, sanitizedFileName, selectedFormat || 'pdf', jobId);
+      console.log('Calling onUploadComplete with jobId:', jobId);
+      await onUploadComplete(uniqueFilename, sanitizedFileName, selectedFormat || 'pdf', jobId);
 
       // **8. Refresh Usage**
       if (onUsageRefresh) {
         onUsageRefresh();
       }
 
-      // **9. Don't reset automatically - let parent component handle flow**
+      // **9. Reset local state so component is ready for next upload**
+      console.log('Upload complete, resetting local state');
+      setSelectedFile(null);
+      setFileSizeMB(0);
     } catch (error) {
       console.error('Error uploading file:', error);
       setErrorMessage('Error uploading file. Please try again.');
