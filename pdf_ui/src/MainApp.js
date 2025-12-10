@@ -390,24 +390,32 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     // Fetch the job record from DynamoDB
     try {
       if (GetJobEndpoint && jobId) {
+        console.log('Fetching job from:', `${GetJobEndpoint}/${jobId}`);
         const response = await fetch(`${GetJobEndpoint}/${jobId}`, {
           headers: {
             Authorization: `Bearer ${auth.user?.id_token}`
           }
         });
 
+        console.log('GetJob response status:', response.status);
+
         if (response.ok) {
           const job = await response.json();
-          console.log('Job record fetched:', job);
+          console.log('Job record fetched successfully:', job);
           setCurrentJob(job);
           setJobStatus(job.status);
 
           // Go to file-actions page to let user choose next action
+          console.log('Changing page to file-actions');
           setCurrentPage('file-actions');
         } else {
-          console.error('Failed to fetch job record');
+          const errorText = await response.text();
+          console.error('Failed to fetch job record:', response.status, errorText);
           setCurrentPage('upload');
         }
+      } else {
+        console.error('GetJobEndpoint or jobId missing:', { GetJobEndpoint, jobId });
+        setCurrentPage('upload');
       }
     } catch (error) {
       console.error('Error fetching job record:', error);
