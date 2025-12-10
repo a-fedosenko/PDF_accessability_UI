@@ -19,7 +19,7 @@ import CallbackPage from './pages/CallbackPage';
 import MaintenancePage from './pages/MaintenancePage';
 
 const cognitoAuthConfig = {
-  authority: `https://${Authority}`,
+  authority: Authority,
   client_id: UserPoolClientId,
   redirect_uri: `${HostedUIUrl}/callback`, // Amplify redirect_uri
   post_logout_redirect_uri: `${HostedUIUrl}/home`,
@@ -39,6 +39,12 @@ function AppRoutes() {
 
   if (auth.error) {
     console.error('Authentication error:', auth.error);
+    // Handle "No matching state found" error by clearing and restarting login
+    if (auth.error.message && auth.error.message.includes('No matching state found')) {
+      console.log('Detected invalid or mismatched OIDC state. Clearing auth and redirecting to home...');
+      auth.removeUser();
+      return <Navigate to="/home" replace />;
+    }
     return <div>Authentication Error: {auth.error.message}</div>;
   }
 

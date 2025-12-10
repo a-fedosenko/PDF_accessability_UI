@@ -78,7 +78,8 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
       (async () => {
         try {
           const token = auth.user?.id_token;
-          const domain = Authority;
+          // Remove https:// protocol from Authority for Identity Pool provider name
+          const domain = Authority.replace('https://', '');
 
           const customCredentialsProvider = new CustomCredentialsProvider();
           customCredentialsProvider.loadFederatedLogin({ domain, token });
