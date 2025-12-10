@@ -249,7 +249,8 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`${GetJobEndpoint}/${jobId}`, {
+        const encodedJobId = encodeURIComponent(jobId);
+        const response = await fetch(`${GetJobEndpoint}/${encodedJobId}`, {
           headers: {
             Authorization: `Bearer ${auth.user?.id_token}`
           }
@@ -396,8 +397,9 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     // Fetch the job record from DynamoDB
     try {
       if (GetJobEndpoint && jobId) {
-        console.log('Fetching job from:', `${GetJobEndpoint}/${jobId}`);
-        const response = await fetch(`${GetJobEndpoint}/${jobId}`, {
+        const encodedJobId = encodeURIComponent(jobId);
+        console.log('Fetching job from:', `${GetJobEndpoint}/${encodedJobId}`);
+        const response = await fetch(`${GetJobEndpoint}/${encodedJobId}`, {
           headers: {
             Authorization: `Bearer ${auth.user?.id_token}`
           }
