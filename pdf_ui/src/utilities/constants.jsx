@@ -65,18 +65,18 @@ export const HostedUIUrl = process.env.REACT_APP_HOSTED_UI_URL;
 export const IndentityPoolId = process.env.REACT_APP_IDENTITY_POOL_ID;
 
 export const FirstSignInAPI = process.env.REACT_APP_UPDATE_FIRST_SIGN_IN;
-export const CheckAndIncrementQuota = process.env.REACT_APP_UPLOAD_QUOTA_API;
+export const CheckAndIncrementQuota = process.env.REACT_APP_UPLOAD_QUOTA_API || 'https://4amyxq069g.execute-api.us-east-2.amazonaws.com/prod/upload-quota';
 
 // Pre-processing Analysis API
 export const StartRemediationAPI = process.env.REACT_APP_START_REMEDIATION_API || 'https://your-api-url/start-remediation';
 export const PendingJobsTableName = process.env.REACT_APP_PENDING_JOBS_TABLE || 'pdf-accessibility-pending-jobs';
 
 // Job Management API Endpoints
-export const CreateJobEndpoint = process.env.REACT_APP_CREATE_JOB_API;
-export const AnalyzeJobEndpoint = process.env.REACT_APP_ANALYZE_JOB_API;
-export const StartProcessingEndpoint = process.env.REACT_APP_START_PROCESSING_API;
-export const GetUserJobsEndpoint = process.env.REACT_APP_GET_USER_JOBS_API;
-export const GetJobEndpoint = process.env.REACT_APP_GET_JOB_API;
+export const CreateJobEndpoint = process.env.REACT_APP_CREATE_JOB_API || 'https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs';
+export const AnalyzeJobEndpoint = process.env.REACT_APP_ANALYZE_JOB_API || 'https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs/analyze';
+export const StartProcessingEndpoint = process.env.REACT_APP_START_PROCESSING_API || 'https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs/start-processing';
+export const GetUserJobsEndpoint = process.env.REACT_APP_GET_USER_JOBS_API || 'https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs/my-jobs';
+export const GetJobEndpoint = process.env.REACT_APP_GET_JOB_API || 'https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs';
 export const JobsTableName = process.env.REACT_APP_JOBS_TABLE_NAME;
 export const EnablePreAnalysis = process.env.REACT_APP_ENABLE_PRE_ANALYSIS === 'true';
 

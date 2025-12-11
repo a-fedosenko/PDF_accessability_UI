@@ -1,4 +1,5 @@
 // App.jsx
+// Build version: 2025-12-10-v2
 import React, { useState } from 'react';
 import {
   Routes,
@@ -78,6 +79,7 @@ function AppRoutes() {
 }
 
 function App() {
+  console.log('App initialized - build v2');
   return (
     <AuthProvider {...cognitoAuthConfig}>
       <ThemeProvider theme={theme}>
