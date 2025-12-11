@@ -30,7 +30,9 @@ const FileActionsSection = ({
   }
 
   const { file_name, file_size_mb } = jobData;
-  const isLargeFile = file_size_mb > 10;
+  // Ensure file_size_mb is a number (DynamoDB may return it as a string)
+  const fileSizeMb = parseFloat(file_size_mb) || 0;
+  const isLargeFile = fileSizeMb > 10;
 
   const handleCancelClick = () => {
     setShowCancelConfirm(true);
@@ -66,14 +68,14 @@ const FileActionsSection = ({
           <div className="file-info-section">
             <div className="file-details">
               <span className="file-name-display">{file_name}</span>
-              <span className="file-size-display">{file_size_mb.toFixed(2)} MB</span>
+              <span className="file-size-display">{fileSizeMb.toFixed(2)} MB</span>
             </div>
           </div>
 
           {isLargeFile && (
             <div className="file-warning">
               <p>
-                <strong>Large file detected ({file_size_mb.toFixed(2)} MB).</strong>
+                <strong>Large file detected ({fileSizeMb.toFixed(2)} MB).</strong>
                 <br />
                 Processing may take longer and consume more quota.
               </p>

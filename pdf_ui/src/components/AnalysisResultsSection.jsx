@@ -53,6 +53,14 @@ function AnalysisResultsSection({ analysis, onStartProcessing, onCancel, idToken
   const complexityColor = getComplexityColor(analysis.complexity);
   const complexityName = getComplexityDisplayName(analysis.complexity);
 
+  // Ensure numeric values are parsed correctly (DynamoDB may return them as strings)
+  const fileSizeMb = parseFloat(analysis.file_size_mb) || 0;
+  const numPages = parseInt(analysis.num_pages) || 0;
+  const estimatedTransactions = parseInt(analysis.estimated_transactions) || 0;
+  const estimatedCostPercentage = parseFloat(analysis.estimated_cost_percentage) || 0;
+  const estimatedElements = parseInt(analysis.estimated_elements) || null;
+  const avgElementsPerPage = parseFloat(analysis.avg_elements_per_page) || null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -74,12 +82,12 @@ function AnalysisResultsSection({ analysis, onStartProcessing, onCancel, idToken
           <div className="analysis-stats">
             <div className="stat-card">
               <label>File Size</label>
-              <value>{analysis.file_size_mb.toFixed(2)} MB</value>
+              <value>{fileSizeMb.toFixed(2)} MB</value>
             </div>
 
             <div className="stat-card">
               <label>Pages</label>
-              <value>{analysis.num_pages}</value>
+              <value>{numPages}</value>
             </div>
 
             <div className="stat-card">
@@ -98,31 +106,31 @@ function AnalysisResultsSection({ analysis, onStartProcessing, onCancel, idToken
             <div className="cost-breakdown">
               <div className="cost-item highlight">
                 <label>Adobe API Transactions:</label>
-                <value>{analysis.estimated_transactions.toLocaleString()}</value>
+                <value>{estimatedTransactions.toLocaleString()}</value>
               </div>
 
               <div className="cost-item highlight">
                 <label>Cost Estimate:</label>
-                <value>{analysis.estimated_cost_percentage.toFixed(2)}% of yearly quota</value>
+                <value>{estimatedCostPercentage.toFixed(2)}% of yearly quota</value>
               </div>
 
               <div className="cost-item">
                 <label>Estimated Elements:</label>
-                <value>{analysis.estimated_elements?.toLocaleString() || 'N/A'}</value>
+                <value>{estimatedElements?.toLocaleString() || 'N/A'}</value>
               </div>
             </div>
 
             <div className="cost-explanation">
               <p>
                 <strong>How we calculate this:</strong> Adobe charges 10 transactions per page.
-                Your {analysis.num_pages}-page PDF will use{' '}
-                {analysis.estimated_transactions.toLocaleString()} transaction{analysis.estimated_transactions !== 1 ? 's' : ''}.
+                Your {numPages}-page PDF will use{' '}
+                {estimatedTransactions.toLocaleString()} transaction{estimatedTransactions !== 1 ? 's' : ''}.
               </p>
-              {analysis.estimated_elements && (
+              {estimatedElements && (
                 <p style={{ marginTop: '8px', fontSize: '14px', color: '#6b7280' }}>
                   <strong>Document complexity:</strong> This PDF contains approximately{' '}
-                  {analysis.estimated_elements.toLocaleString()} structural elements
-                  ({analysis.avg_elements_per_page?.toFixed(1) || 'N/A'} elements per page on average).
+                  {estimatedElements.toLocaleString()} structural elements
+                  ({avgElementsPerPage?.toFixed(1) || 'N/A'} elements per page on average).
                   Documents with many elements may take longer to process but will use the same number of transactions.
                 </p>
               )}
