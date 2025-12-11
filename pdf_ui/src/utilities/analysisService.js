@@ -5,7 +5,7 @@
  */
 
 import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
-import { StartRemediationAPI, PendingJobsTableName, region } from './constants';
+import { StartProcessingEndpoint, PendingJobsTableName, region } from './constants';
 
 /**
  * Poll DynamoDB for analysis results
@@ -89,7 +89,7 @@ export const pollForAnalysis = async (jobId, awsCredentials, maxAttempts = 30, i
  */
 export const startRemediation = async (jobId, idToken) => {
   try {
-    const response = await fetch(StartRemediationAPI, {
+    const response = await fetch(StartProcessingEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
