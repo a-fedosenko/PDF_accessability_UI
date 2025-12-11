@@ -120,14 +120,21 @@ export const startRemediation = async (jobId, idToken) => {
  * @returns {string} Color code
  */
 export const getComplexityColor = (complexity) => {
-  switch (complexity) {
-    case 'simple':
+  switch (complexity?.toUpperCase()) {
+    case 'LOW':
       return '#28a745'; // Green
-    case 'moderate':
+    case 'MEDIUM':
       return '#ffc107'; // Yellow
-    case 'complex':
+    case 'HIGH':
+      return '#dc3545'; // Red
+    // Legacy support for old complexity values
+    case 'SIMPLE':
+      return '#28a745'; // Green
+    case 'MODERATE':
+      return '#ffc107'; // Yellow
+    case 'COMPLEX':
       return '#fd7e14'; // Orange
-    case 'very_complex':
+    case 'VERY_COMPLEX':
       return '#dc3545'; // Red
     default:
       return '#6c757d'; // Gray
@@ -140,14 +147,21 @@ export const getComplexityColor = (complexity) => {
  * @returns {string} Display name
  */
 export const getComplexityDisplayName = (complexity) => {
-  switch (complexity) {
-    case 'simple':
+  switch (complexity?.toUpperCase()) {
+    case 'LOW':
+      return 'Low';
+    case 'MEDIUM':
+      return 'Medium';
+    case 'HIGH':
+      return 'High';
+    // Legacy support for old complexity values
+    case 'SIMPLE':
       return 'Simple';
-    case 'moderate':
+    case 'MODERATE':
       return 'Moderate';
-    case 'complex':
+    case 'COMPLEX':
       return 'Complex';
-    case 'very_complex':
+    case 'VERY_COMPLEX':
       return 'Very Complex';
     default:
       return 'Unknown';
