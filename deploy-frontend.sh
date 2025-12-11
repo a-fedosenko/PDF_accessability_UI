@@ -143,6 +143,15 @@ add_frontend_env_var "REACT_APP_UPDATE_FIRST_SIGN_IN_ENDPOINT" "$REACT_APP_UPDAT
 add_frontend_env_var "REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT" "$REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT"
 add_frontend_env_var "REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT" "$REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT"
 
+# Job Management API Endpoints (from .env file)
+add_frontend_env_var "REACT_APP_GET_USER_JOBS_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs/my-jobs"
+add_frontend_env_var "REACT_APP_GET_JOB_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs"
+add_frontend_env_var "REACT_APP_CREATE_JOB_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs"
+add_frontend_env_var "REACT_APP_ANALYZE_JOB_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs/analyze"
+add_frontend_env_var "REACT_APP_START_PROCESSING_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs/start-processing"
+add_frontend_env_var "REACT_APP_CANCEL_JOB_ENDPOINT" ""
+add_frontend_env_var "REACT_APP_ENABLE_PRE_ANALYSIS" "true"
+
 FRONTEND_ENVIRONMENT='{
   "type": "LINUX_CONTAINER",
   "image": "aws/codebuild/amazonlinux-x86_64-standard:5.0",
