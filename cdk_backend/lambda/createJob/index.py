@@ -2,10 +2,17 @@ import json
 import boto3
 import os
 from datetime import datetime, timezone
+from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb')
 table_name = os.environ['JOBS_TABLE_NAME']
 table = dynamodb.Table(table_name)
+
+def decimal_default(obj):
+    """JSON serializer for Decimal objects"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
 
 def handler(event, context):
     """Create a new job in DynamoDB"""
@@ -31,6 +38,9 @@ def handler(event, context):
 
         now = datetime.now(timezone.utc).isoformat()
 
+        # Convert to Decimal for DynamoDB (DynamoDB doesn't support float)
+        file_size_mb = Decimal(str(round(file_size_bytes / (1024 * 1024), 2)))
+
         job_item = {
             'job_id': job_id,
             'user_sub': user_sub,
@@ -38,7 +48,7 @@ def handler(event, context):
             's3_key': s3_key,
             's3_bucket': s3_bucket,
             'file_size_bytes': file_size_bytes,
-            'file_size_mb': round(file_size_bytes / (1024 * 1024), 2),
+            'file_size_mb': file_size_mb,
             'status': 'UPLOADED',
             'created_at': now,
             'updated_at': now
@@ -49,7 +59,7 @@ def handler(event, context):
         return {
             'statusCode': 200,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'message': 'Job created', 'job': job_item}, default=str)
+            'body': json.dumps({'message': 'Job created', 'job': job_item}, default=decimal_default)
         }
 
     except Exception as e:

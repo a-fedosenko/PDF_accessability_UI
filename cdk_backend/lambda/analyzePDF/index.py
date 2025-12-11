@@ -2,6 +2,7 @@ import json
 import boto3
 import os
 from datetime import datetime, timezone
+from decimal import Decimal
 import PyPDF2
 from io import BytesIO
 
@@ -13,6 +14,12 @@ table = dynamodb.Table(table_name)
 # Adobe API pricing: 10 transactions per page
 TRANSACTIONS_PER_PAGE = 10
 YEARLY_QUOTA = 25000
+
+def decimal_default(obj):
+    """JSON serializer for Decimal objects"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
 
 def handler(event, context):
     """Analyze PDF complexity and estimate cost"""
@@ -114,7 +121,7 @@ def handler(event, context):
             total_elements = num_pages * 100
             avg_elements_per_page = 100
 
-        # Update job with analysis results
+        # Update job with analysis results (convert to Decimal for DynamoDB)
         update_response = table.update_item(
             Key={'job_id': job_id},
             UpdateExpression='SET #status = :status, num_pages = :pages, complexity = :complexity, '
@@ -127,9 +134,9 @@ def handler(event, context):
                 ':pages': num_pages,
                 ':complexity': complexity,
                 ':transactions': estimated_transactions,
-                ':cost_pct': round(estimated_cost_percentage, 2),
+                ':cost_pct': Decimal(str(round(estimated_cost_percentage, 2))),
                 ':elements': total_elements,
-                ':avg_elements': round(avg_elements_per_page, 1),
+                ':avg_elements': Decimal(str(round(avg_elements_per_page, 1))),
                 ':updated_at': datetime.now(timezone.utc).isoformat()
             },
             ReturnValues='ALL_NEW'
@@ -141,7 +148,7 @@ def handler(event, context):
             'body': json.dumps({
                 'message': 'Analysis complete',
                 'job': update_response['Attributes']
-            }, default=str)
+            }, default=decimal_default)
         }
 
     except Exception as e:
