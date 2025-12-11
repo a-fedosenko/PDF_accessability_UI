@@ -9,7 +9,15 @@ import imgFileText from '../assets/pdf-icon.svg';
 import imgCodeXml from '../assets/pdf-html.svg';
 import './UploadSection.css';
 
-import { region, PDFBucket, HTMLBucket, CheckAndIncrementQuota, validateBucketConfiguration, validateFormatBucket } from '../utilities/constants';
+import {
+  region,
+  PDFBucket,
+  HTMLBucket,
+  CheckAndIncrementQuota,
+  CreateJobEndpoint,
+  validateBucketConfiguration,
+  validateFormatBucket
+} from '../utilities/constants';
 
 function sanitizeFilename(filename, format = 'pdf') {
   // Normalize the filename to decompose accented characters
@@ -260,34 +268,81 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       const uniqueFilename = `${sanitizedEmail}_${timestamp}_${sanitizedFileName}`; // Combined unique filename
 
       // Select bucket and directory based on format
-      // NOTE: Changed to pdf-upload/ for pre-processing analysis
+      // NEW: Changed to uploads/{user_sub}/ for stateful job tracking
       const selectedBucket = selectedFormat === 'html' ? HTMLBucket : PDFBucket;
-      const keyPrefix = selectedFormat === 'html' ? 'uploads/' : 'pdf-upload/';
+      const keyPrefix = `uploads/${userSub}/`;
 
+      // Generate unique job_id using timestamp and random suffix for uniqueness
+      // Replace spaces and special characters with underscores to ensure URL-safety
+      const baseFileName = sanitizedFileName.replace('.pdf', '').replace(/[^a-zA-Z0-9]/g, '_');
+      const randomSuffix = Math.random().toString(36).substring(2, 8); // 6-char random string
+      const jobId = `${baseFileName}_${timestamp}_${randomSuffix}`;
+      const s3Key = `${keyPrefix}${jobId}.pdf`;
+
+      console.log('=== UPLOAD DETAILS ===');
+      console.log('Original file name:', file.name);
+      console.log('Sanitized file name:', sanitizedFileName);
+      console.log('Base file name:', baseFileName);
+      console.log('Timestamp:', timestamp);
+      console.log('Random suffix:', randomSuffix);
+      console.log('Generated job_id:', jobId);
+      console.log('S3 key:', s3Key);
 
       const params = {
         Bucket: selectedBucket,
-        Key: `${keyPrefix}${uniqueFilename}`,
+        Key: s3Key,
         Body: file,
       };
 
       const command = new PutObjectCommand(params);
       await client.send(command);
 
-      console.log('Upload complete, new file name:', uniqueFilename);
+      console.log('Upload complete to S3:', s3Key);
 
-      // Generate job_id (filename_timestamp) for analysis polling
-      const jobId = `${sanitizedFileName}_${timestamp}`;
+      // **6. Create job record in DynamoDB**
+      if (CreateJobEndpoint) {
+        try {
+          const jobResponse = await fetch(CreateJobEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              job_id: jobId,
+              user_sub: userSub,
+              user_email: auth.user?.profile?.email,
+              file_name: sanitizedFileName,
+              s3_key: s3Key,
+              s3_bucket: selectedBucket,
+              file_size_bytes: file.size
+            })
+          });
 
-      // **6. Notify Parent of Completion with format and job_id**
-      onUploadComplete(uniqueFilename, sanitizedFileName, selectedFormat || 'pdf', jobId);
+          if (!jobResponse.ok) {
+            console.error('Failed to create job record:', await jobResponse.text());
+          } else {
+            console.log('Job record created successfully in DynamoDB');
+          }
+        } catch (error) {
+          console.error('Error creating job record:', error);
+          // Continue anyway - don't fail the upload
+        }
+      }
 
-      // **7. Refresh Usage**
+      // **7. Notify Parent of Completion with format and job_id**
+      console.log('Calling onUploadComplete with jobId:', jobId);
+      await onUploadComplete(uniqueFilename, sanitizedFileName, selectedFormat || 'pdf', jobId);
+
+      // **8. Refresh Usage**
       if (onUsageRefresh) {
         onUsageRefresh();
       }
 
-      // **8. Don't reset automatically - let parent component handle flow**
+      // **9. Reset local state so component is ready for next upload**
+      console.log('Upload complete, resetting local state');
+      setSelectedFile(null);
+      setFileSizeMB(0);
     } catch (error) {
       console.error('Error uploading file:', error);
       setErrorMessage('Error uploading file. Please try again.');

@@ -67,7 +67,18 @@ export const IndentityPoolId = process.env.REACT_APP_IDENTITY_POOL_ID;
 export const FirstSignInAPI = process.env.REACT_APP_UPDATE_FIRST_SIGN_IN;
 export const CheckAndIncrementQuota = process.env.REACT_APP_UPLOAD_QUOTA_API;
 
-// Pre-processing Analysis API
+// Job Management API Endpoints
+export const GetUserJobsEndpoint = process.env.REACT_APP_GET_USER_JOBS_ENDPOINT;
+export const GetJobEndpoint = process.env.REACT_APP_GET_JOB_ENDPOINT;
+export const CreateJobEndpoint = process.env.REACT_APP_CREATE_JOB_ENDPOINT;
+export const AnalyzeJobEndpoint = process.env.REACT_APP_ANALYZE_JOB_ENDPOINT;
+export const StartProcessingEndpoint = process.env.REACT_APP_START_PROCESSING_ENDPOINT;
+export const CancelJobEndpoint = process.env.REACT_APP_CANCEL_JOB_ENDPOINT; // Will need to create this lambda
+
+// Feature Flags
+export const EnablePreAnalysis = process.env.REACT_APP_ENABLE_PRE_ANALYSIS === 'true';
+
+// Pre-processing Analysis API (legacy - keeping for backward compatibility)
 export const StartRemediationAPI = process.env.REACT_APP_START_REMEDIATION_API || 'https://your-api-url/start-remediation';
 export const PendingJobsTableName = process.env.REACT_APP_PENDING_JOBS_TABLE || 'pdf-accessibility-pending-jobs';
 

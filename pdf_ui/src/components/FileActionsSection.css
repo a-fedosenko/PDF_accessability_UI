@@ -1,0 +1,332 @@
+.file-actions-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.file-actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .file-actions-container {
+    max-width: 100%;
+    margin: 0 8px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .file-actions-container {
+    max-width: 100%;
+    margin: 0 4px;
+    gap: 12px;
+  }
+}
+
+.file-actions-content {
+  background-color: #ffffff;
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .file-actions-content {
+    padding: 16px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .file-actions-content {
+    padding: 12px;
+    gap: 12px;
+  }
+}
+
+.file-actions-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.file-actions-title h2 {
+  font-family: 'Geist', sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 28px;
+  color: #020617;
+  text-align: center;
+  margin: 0;
+}
+
+.file-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.file-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.file-name-display {
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  color: #020617;
+  text-align: center;
+  word-break: break-word;
+}
+
+.file-size-display {
+  font-family: 'Geist', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  color: #475569;
+}
+
+.file-warning {
+  background-color: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 12px 16px;
+  width: 100%;
+}
+
+.file-warning p {
+  font-family: 'Geist', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  color: #92400e;
+  margin: 0;
+  text-align: center;
+}
+
+.file-actions-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  width: 100%;
+}
+
+.file-actions-main-text {
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  color: #020617;
+  margin: 0;
+}
+
+.file-actions-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.check-file-btn,
+.start-processing-btn,
+.cancel-btn {
+  width: 100%;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.check-file-btn {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #020617;
+}
+
+.check-file-btn:hover {
+  border-color: #8c1d40;
+  box-shadow: 0 2px 8px rgba(140, 29, 64, 0.1);
+}
+
+.start-processing-btn {
+  background-color: #8c1d40;
+  color: #ffffff;
+}
+
+.start-processing-btn:hover {
+  background-color: #7a1a37;
+}
+
+.cancel-btn {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #020617;
+}
+
+.cancel-btn:hover {
+  border-color: #8c1d40;
+  box-shadow: 0 2px 8px rgba(140, 29, 64, 0.1);
+}
+
+.check-file-btn:disabled,
+.start-processing-btn:disabled,
+.cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.check-file-btn:disabled:hover,
+.cancel-btn:disabled:hover {
+  border-color: #cbd5e1;
+  box-shadow: none;
+}
+
+.start-processing-btn:disabled:hover {
+  background-color: #8c1d40;
+}
+
+.file-actions-help {
+  text-align: center;
+  width: 100%;
+}
+
+.file-actions-help p {
+  font-family: 'Geist', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 18px;
+  color: #475569;
+  margin: 0;
+}
+
+/* Confirmation Dialog Styles */
+.confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.confirmation-dialog {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.confirmation-dialog h3 {
+  font-family: 'Geist', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 28px;
+  color: #020617;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.confirmation-dialog p {
+  font-family: 'Geist', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  color: #475569;
+  margin: 0 0 24px 0;
+  text-align: center;
+}
+
+.confirmation-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .confirmation-buttons {
+    flex-direction: column;
+  }
+}
+
+.confirm-btn-primary,
+.confirm-btn-secondary {
+  flex: 1;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.confirm-btn-primary {
+  background-color: #8c1d40;
+  color: #ffffff;
+}
+
+.confirm-btn-primary:hover {
+  background-color: #7a1a37;
+}
+
+.confirm-btn-secondary {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #020617;
+}
+
+.confirm-btn-secondary:hover {
+  border-color: #8c1d40;
+  box-shadow: 0 2px 8px rgba(140, 29, 64, 0.1);
+}

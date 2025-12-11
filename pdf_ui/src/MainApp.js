@@ -15,10 +15,21 @@ import FirstSignInDialog from './components/FirstSignInDialog';
 import HeroSection from './components/HeroSection';
 import InformationBlurb from './components/InformationBlurb';
 
-import { Authority, CheckAndIncrementQuota } from './utilities/constants';
+import {
+  Authority,
+  CheckAndIncrementQuota,
+  GetUserJobsEndpoint,
+  GetJobEndpoint,
+  CreateJobEndpoint,
+  AnalyzeJobEndpoint,
+  StartProcessingEndpoint,
+  CancelJobEndpoint,
+  EnablePreAnalysis
+} from './utilities/constants';
 import CustomCredentialsProvider from './utilities/CustomCredentialsProvider';
 import DeploymentPopup from './components/DeploymentPopup';
 import { pollForAnalysis } from './utilities/analysisService';
+import FileActionsSection from './components/FileActionsSection';
 
 function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const auth = useAuth();
@@ -35,7 +46,11 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const [analysisData, setAnalysisData] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState('');
- 
+
+  // Job management states
+  const [currentJob, setCurrentJob] = useState(null);
+  const [jobStatus, setJobStatus] = useState(null);
+  const [pollingInterval, setPollingInterval] = useState(null);
 
   // Centralized Usage State
   const [usageCount, setUsageCount] = useState(0);
@@ -166,12 +181,13 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     setShowDeploymentPopup(true);
   };
 
-  // Handle events from child components
+  // Handle events from child components - FIXED to show file-actions immediately
   const handleUploadComplete = async (updated_filename, original_fileName, format = 'pdf', jobId) => {
+    console.log('=== UPLOAD COMPLETE ===');
     console.log('Upload completed, new file name:', updated_filename);
     console.log('Original file name:', original_fileName);
     console.log('Selected format:', format);
-    console.log('Job ID for analysis:', jobId);
+    console.log('Job ID:', jobId);
 
     const fileData = {
       name: original_fileName,
@@ -183,34 +199,49 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
     setUploadedFile(fileData);
 
-    // Start analysis polling for PDF format
-    if (format === 'pdf') {
-      setIsAnalyzing(true);
-      setAnalysisError('');
-      setCurrentPage('analyzing');
+    // CRITICAL FIX: Immediately fetch the job and show file-actions page
+    // Do NOT automatically start analysis
+    try {
+      if (GetJobEndpoint && jobId) {
+        const encodedJobId = encodeURIComponent(jobId);
+        console.log('Fetching job from:', `${GetJobEndpoint}/${encodedJobId}`);
 
-      try {
-        console.log('Starting analysis polling for job:', jobId);
-        const analysis = await pollForAnalysis(jobId, awsCredentials);
-        console.log('Analysis received:', analysis);
+        const response = await fetch(`${GetJobEndpoint}/${encodedJobId}`, {
+          headers: {
+            Authorization: `Bearer ${auth.user?.id_token}`
+          }
+        });
 
-        setAnalysisData(analysis);
-        setCurrentPage('analysis-results');
-      } catch (error) {
-        console.error('Error during analysis:', error);
-        setAnalysisError(error.message || 'Failed to analyze PDF. Please try again.');
+        if (response.ok) {
+          const job = await response.json();
+          console.log('Job record fetched:', job);
+          setCurrentJob(job);
+          setJobStatus(job.status);
+
+          // IMMEDIATELY show file-actions page - user chooses what to do next
+          console.log('Setting page to file-actions');
+          setCurrentPage('file-actions');
+        } else {
+          console.error('Failed to fetch job record:', response.status);
+          // If job fetch fails, still show the page but with minimal info
+          setCurrentJob({
+            job_id: jobId,
+            file_name: original_fileName,
+            file_size_mb: 0,
+            status: 'UPLOADED'
+          });
+          setCurrentPage('file-actions');
+        }
+      } else {
+        console.error('GetJobEndpoint or jobId missing');
         setCurrentPage('upload');
-      } finally {
-        setIsAnalyzing(false);
       }
-    } else {
-      // For HTML format, skip analysis and go straight to processing
-      setProcessingStartTime(Date.now());
-      setCurrentPage('processing');
+    } catch (error) {
+      console.error('Error fetching job record:', error);
+      setCurrentPage('upload');
     }
 
-    // After a successful upload (and increment usage),
-    // refresh usage so the new count shows up
+    // After a successful upload, refresh usage
     refreshUsage();
   };
 
@@ -247,7 +278,246 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     setAnalysisData(null);
     setIsAnalyzing(false);
     setAnalysisError('');
+    setCurrentJob(null);
+    setJobStatus(null);
   };
+
+  // ========== NEW JOB MANAGEMENT HANDLERS ==========
+
+  // FUNCTION: Start polling for job status changes
+  const startPollingJob = useCallback((jobId) => {
+    // Clear any existing polling interval
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+
+    console.log('Starting polling for job:', jobId);
+
+    const interval = setInterval(async () => {
+      try {
+        const encodedJobId = encodeURIComponent(jobId);
+        const response = await fetch(`${GetJobEndpoint}/${encodedJobId}`, {
+          headers: {
+            Authorization: `Bearer ${auth.user?.id_token}`
+          }
+        });
+
+        if (!response.ok) {
+          console.error('Failed to fetch job status:', response.status);
+          clearInterval(interval);
+          setPollingInterval(null);
+          return;
+        }
+
+        const job = await response.json();
+        console.log('Job status update:', job.status);
+
+        setCurrentJob(job);
+        setJobStatus(job.status);
+
+        // Stop polling when reaching a terminal or actionable state
+        if (['ANALYSIS_COMPLETE', 'COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status)) {
+          console.log('Stopping polling - terminal state reached:', job.status);
+          clearInterval(interval);
+          setPollingInterval(null);
+
+          // Update UI based on final status
+          if (job.status === 'ANALYSIS_COMPLETE') {
+            setAnalysisData(job);
+            setCurrentPage('analysis-results');
+          } else if (job.status === 'COMPLETED') {
+            setProcessedResult({ url: job.processed_s3_key });
+            setCurrentPage('results');
+          } else if (job.status === 'FAILED') {
+            setAnalysisError(job.error_message || 'Processing failed');
+            setCurrentPage('upload');
+          } else if (job.status === 'CANCELLED') {
+            setCurrentPage('upload');
+          }
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    setPollingInterval(interval);
+  }, [auth.user, pollingInterval, GetJobEndpoint]);
+
+  // Clean up polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
+
+  // FUNCTION: Handle "Check File" button - trigger analysis
+  const handleCheckFile = async () => {
+    if (!currentJob || !AnalyzeJobEndpoint) return;
+
+    try {
+      console.log('Starting file analysis for job:', currentJob.job_id);
+      setCurrentPage('analyzing');
+      setAnalysisError('');
+
+      const response = await fetch(AnalyzeJobEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${auth.user.id_token}`
+        },
+        body: JSON.stringify({ job_id: currentJob.job_id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Analysis request failed');
+      }
+
+      // Start polling for results
+      startPollingJob(currentJob.job_id);
+    } catch (error) {
+      console.error('Failed to start analysis:', error);
+      setAnalysisError(error.message || 'Failed to start analysis');
+      setCurrentPage('file-actions');
+    }
+  };
+
+  // FUNCTION: Handle "Start Processing" button from FileActionsSection
+  const handleStartProcessingFromFileActions = async () => {
+    if (!currentJob || !StartProcessingEndpoint) return;
+
+    try {
+      console.log('Starting processing for job:', currentJob.job_id);
+      setCurrentPage('processing');
+      setProcessingStartTime(Date.now());
+
+      const response = await fetch(StartProcessingEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${auth.user.id_token}`
+        },
+        body: JSON.stringify({ job_id: currentJob.job_id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start processing');
+      }
+
+      // Start polling for completion
+      startPollingJob(currentJob.job_id);
+    } catch (error) {
+      console.error('Failed to start processing:', error);
+      setAnalysisError(error.message || 'Failed to start processing');
+      setCurrentPage('file-actions');
+    }
+  };
+
+  // FUNCTION: Handle cancel from FileActionsSection - mark job as CANCELLED
+  const handleCancelFileActions = async () => {
+    if (!currentJob) return;
+
+    console.log('User canceled job:', currentJob.job_id);
+
+    // Try to mark job as CANCELLED in backend
+    // Note: If CancelJobEndpoint doesn't exist yet, we'll just clear local state
+    if (CancelJobEndpoint) {
+      try {
+        const response = await fetch(CancelJobEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${auth.user.id_token}`
+          },
+          body: JSON.stringify({
+            job_id: currentJob.job_id,
+            status: 'CANCELLED'
+          })
+        });
+
+        if (!response.ok) {
+          console.error('Failed to cancel job in backend:', response.status);
+        }
+      } catch (error) {
+        console.error('Error canceling job:', error);
+      }
+    }
+
+    // Clear local state and return to upload page
+    setCurrentPage('upload');
+    setUploadedFile(null);
+    setCurrentJob(null);
+    setJobStatus(null);
+    setAnalysisData(null);
+  };
+
+  // FUNCTION: Session Recovery - Fetch user's active jobs on mount
+  const recoverSession = useCallback(async () => {
+    if (!auth.isAuthenticated || !GetUserJobsEndpoint) return;
+
+    try {
+      console.log('Recovering session - fetching user jobs...');
+      const response = await fetch(GetUserJobsEndpoint, {
+        headers: {
+          Authorization: `Bearer ${auth.user.id_token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch user jobs:', response.statusText);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('User jobs fetched:', data);
+
+      if (data.jobs && data.jobs.length > 0) {
+        // Get most recent active job (exclude CANCELLED, COMPLETED, FAILED)
+        const activeJob = data.jobs.find(job =>
+          ['UPLOADED', 'ANALYZING', 'ANALYSIS_COMPLETE', 'PROCESSING'].includes(job.status)
+        );
+
+        if (activeJob) {
+          console.log('Active job found:', activeJob);
+          setCurrentJob(activeJob);
+          setJobStatus(activeJob.status);
+
+          // Set UI page based on status
+          switch (activeJob.status) {
+            case 'UPLOADED':
+              setCurrentPage('file-actions');
+              break;
+            case 'ANALYZING':
+              setCurrentPage('analyzing');
+              startPollingJob(activeJob.job_id);
+              break;
+            case 'ANALYSIS_COMPLETE':
+              setAnalysisData(activeJob);
+              setCurrentPage('analysis-results');
+              break;
+            case 'PROCESSING':
+              setCurrentPage('processing');
+              startPollingJob(activeJob.job_id);
+              break;
+            default:
+              break;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Session recovery failed:', error);
+    }
+  }, [auth.isAuthenticated, auth.user, GetUserJobsEndpoint, startPollingJob]);
+
+  // Session recovery on mount
+  useEffect(() => {
+    if (auth.isAuthenticated && awsCredentials && GetUserJobsEndpoint) {
+      recoverSession();
+    }
+  }, [auth.isAuthenticated, awsCredentials, recoverSession, GetUserJobsEndpoint]);
+
+  // ========== END NEW JOB MANAGEMENT HANDLERS ==========
 
   // Handle authentication loading and errors
   if (auth.isLoading) {
@@ -318,6 +588,17 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
                 setUsageCount={setUsageCount}
                 isFileUploaded={!!uploadedFile}
                 onShowDeploymentPopup={handleShowDeploymentPopup}
+              />
+            )}
+
+            {currentPage === 'file-actions' && currentJob && (
+              <FileActionsSection
+                jobData={currentJob}
+                onCheckFile={handleCheckFile}
+                onStartProcessing={handleStartProcessingFromFileActions}
+                onCancel={handleCancelFileActions}
+                enableAnalysis={EnablePreAnalysis}
+                loading={false}
               />
             )}
 

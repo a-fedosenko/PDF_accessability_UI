@@ -103,22 +103,29 @@ function AnalysisResultsSection({ analysis, onStartProcessing, onCancel, idToken
 
               <div className="cost-item highlight">
                 <label>Cost Estimate:</label>
-                <value>{analysis.estimated_cost_percentage.toFixed(2)}% of monthly quota</value>
+                <value>{analysis.estimated_cost_percentage.toFixed(2)}% of yearly quota</value>
               </div>
 
               <div className="cost-item">
-                <label>Average Elements per Page:</label>
-                <value>{analysis.avg_elements_per_page.toFixed(1)}</value>
+                <label>Estimated Elements:</label>
+                <value>{analysis.estimated_elements?.toLocaleString() || 'N/A'}</value>
               </div>
             </div>
 
             <div className="cost-explanation">
               <p>
-                <strong>How we calculate this:</strong> Adobe charges per structural element
-                (headings, paragraphs, tables, images), not per page. Your PDF has approximately{' '}
-                {analysis.avg_elements_per_page.toFixed(1)} elements per page, resulting in{' '}
-                {analysis.estimated_transactions.toLocaleString()} total transactions.
+                <strong>How we calculate this:</strong> Adobe charges 10 transactions per page.
+                Your {analysis.num_pages}-page PDF will use{' '}
+                {analysis.estimated_transactions.toLocaleString()} transaction{analysis.estimated_transactions !== 1 ? 's' : ''}.
               </p>
+              {analysis.estimated_elements && (
+                <p style={{ marginTop: '8px', fontSize: '14px', color: '#6b7280' }}>
+                  <strong>Document complexity:</strong> This PDF contains approximately{' '}
+                  {analysis.estimated_elements.toLocaleString()} structural elements
+                  ({analysis.avg_elements_per_page?.toFixed(1) || 'N/A'} elements per page on average).
+                  Documents with many elements may take longer to process but will use the same number of transactions.
+                </p>
+              )}
             </div>
           </div>
 
