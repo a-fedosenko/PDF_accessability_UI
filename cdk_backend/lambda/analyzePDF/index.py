@@ -87,16 +87,26 @@ def handler(event, context):
 
             num_pages = len(pdf_reader.pages)
 
-            # Estimate elements (simple heuristic)
+            # Sample only first 5 pages for performance (extracting text is slow)
+            sample_size = min(5, num_pages)
             total_elements = 0
-            for page in pdf_reader.pages:
-                # Count text elements
-                text = page.extract_text()
-                # Rough estimate: lines + objects
-                elements = len(text.split('\n')) + 10  # Base objects per page
-                total_elements += elements
 
-            avg_elements_per_page = total_elements / num_pages if num_pages > 0 else 0
+            for i in range(sample_size):
+                try:
+                    page = pdf_reader.pages[i]
+                    # Count text elements
+                    text = page.extract_text()
+                    # Rough estimate: lines + objects
+                    elements = len(text.split('\n')) + 10  # Base objects per page
+                    total_elements += elements
+                except Exception as page_error:
+                    print(f"Error extracting text from page {i}: {str(page_error)}")
+                    # Use default estimate for this page
+                    total_elements += 60
+
+            avg_elements_per_page = total_elements / sample_size if sample_size > 0 else 60
+            # Estimate total elements for all pages based on sample
+            total_elements = int(avg_elements_per_page * num_pages)
 
             # Calculate cost estimate
             estimated_transactions = num_pages * TRANSACTIONS_PER_PAGE
