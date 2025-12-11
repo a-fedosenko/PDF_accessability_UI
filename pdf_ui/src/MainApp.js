@@ -249,8 +249,21 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   // Handle user starting remediation after seeing analysis
   const handleStartRemediation = (analysis) => {
     console.log('Starting remediation for analyzed PDF:', analysis);
+
+    // Set uploadedFile data from analysis so ProcessingContainer can work
+    setUploadedFile({
+      name: analysis.file_name,
+      updatedName: analysis.file_key || analysis.s3_key,
+      format: 'pdf', // Default to PDF format
+      jobId: analysis.job_id,
+      size: analysis.file_size_mb || 0
+    });
+
     setProcessingStartTime(Date.now());
     setCurrentPage('processing');
+
+    // Start polling for job completion
+    startPollingJob(analysis.job_id);
   };
 
   // Handle user canceling after seeing analysis
