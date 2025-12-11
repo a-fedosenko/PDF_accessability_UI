@@ -575,6 +575,46 @@ export class CdkBackendStack extends cdk.Stack {
       },
     });
 
+    // Step Functions Callback Lambda - updates job status when processing completes
+    const stepFunctionsCallbackLambda = new lambda.Function(this, 'StepFunctionsCallbackLambda', {
+      runtime: lambda.Runtime.PYTHON_3_9,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/stepFunctionsCallback/'),
+      timeout: cdk.Duration.seconds(30),
+      role: jobManagementLambdaRole,
+      environment: {
+        JOBS_TABLE_NAME: jobsTable.tableName,
+      },
+    });
+
+    // Add DynamoDB Scan permission for callback Lambda (to find job by s3_key)
+    jobManagementLambdaRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['dynamodb:Scan'],
+      resources: [jobsTable.tableArn],
+    }));
+
+    // EventBridge rule to trigger callback when Step Functions execution completes
+    const stepFunctionsStateMachineArn = 'arn:aws:states:us-east-2:471414695760:stateMachine:MyStateMachine6C968CA5-HxjDC8YTSpVF';
+
+    const stepFunctionsCompletionRule = new events.Rule(this, 'StepFunctionsCompletionRule', {
+      eventPattern: {
+        source: ['aws.states'],
+        detailType: ['Step Functions Execution Status Change'],
+        detail: {
+          status: ['SUCCEEDED', 'FAILED'],
+          stateMachineArn: [stepFunctionsStateMachineArn],
+        },
+      },
+    });
+
+    stepFunctionsCompletionRule.addTarget(new targets.LambdaFunction(stepFunctionsCallbackLambda));
+
+    stepFunctionsCallbackLambda.addPermission('AllowEventBridgeInvokeStepFunctions', {
+      principal: new iam.ServicePrincipal('events.amazonaws.com'),
+      sourceArn: stepFunctionsCompletionRule.ruleArn,
+    });
+
     // Note: S3 event trigger would be added here if needed
     // Since we're using imported buckets, we'll need to manually configure
     // the S3 event trigger or call this Lambda from the frontend after upload

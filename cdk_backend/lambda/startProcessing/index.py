@@ -56,11 +56,16 @@ def handler(event, context):
         now = datetime.now(timezone.utc).isoformat()
         update_response = table.update_item(
             Key={'job_id': job_id},
-            UpdateExpression='SET #status = :status, updated_at = :updated_at',
+            UpdateExpression='SET #status = :status, updated_at = :updated_at, processing_metadata = :metadata',
             ExpressionAttributeNames={'#status': 'status'},
             ExpressionAttributeValues={
                 ':status': 'PROCESSING',
-                ':updated_at': now
+                ':updated_at': now,
+                ':metadata': {
+                    's3_bucket': job.get('s3_bucket'),
+                    's3_key': job.get('s3_key'),
+                    'started_at': now
+                }
             },
             ReturnValues='ALL_NEW'
         )
@@ -71,10 +76,11 @@ def handler(event, context):
         if split_pdf_lambda:
             try:
                 # Prepare payload for SplitPDF Lambda
+                # Include job_id so Step Functions can pass it through for callback
                 split_payload = {
                     's3_bucket': job.get('s3_bucket'),
                     's3_key': job.get('s3_key'),
-                    'job_id': job_id,
+                    'job_id': job_id,  # This will be passed to Step Functions input
                     'user_sub': user_sub
                 }
 
