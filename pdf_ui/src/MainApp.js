@@ -14,6 +14,7 @@ import theme from './theme';
 import FirstSignInDialog from './components/FirstSignInDialog';
 import HeroSection from './components/HeroSection';
 import InformationBlurb from './components/InformationBlurb';
+import './App.css';
 
 import {
   Authority,

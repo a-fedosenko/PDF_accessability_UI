@@ -127,7 +127,7 @@ function AnalysisResultsSection({ analysis, onStartProcessing, onCancel, idToken
                 {estimatedTransactions.toLocaleString()} transaction{estimatedTransactions !== 1 ? 's' : ''}.
               </p>
               {estimatedElements && (
-                <p style={{ marginTop: '8px', fontSize: '14px', color: '#6b7280' }}>
+                <p style={{ marginTop: '8px', fontSize: '14px', color: '#ffffff' }}>
                   <strong>Document complexity:</strong> This PDF contains approximately{' '}
                   {estimatedElements.toLocaleString()} structural elements
                   ({avgElementsPerPage?.toFixed(1) || 'N/A'} elements per page on average).
