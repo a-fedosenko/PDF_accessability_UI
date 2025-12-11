@@ -11,6 +11,7 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as cloudtrail from 'aws-cdk-lib/aws-cloudtrail';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 export class CdkBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -43,6 +44,23 @@ export class CdkBackendStack extends cdk.Stack {
     // Use the first available bucket as the main bucket for other resources
     const mainBucket = pdfBucket || htmlBucket!;
     console.log(`Using main bucket for other resources: ${mainBucket.bucketName}`);
+
+    // --------- Create DynamoDB Table for Job Tracking ----------
+    const jobsTable = new dynamodb.Table(this, 'PDFJobsTable', {
+      tableName: 'pdf-accessibility-jobs',
+      partitionKey: { name: 'job_id', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: 'expires_at',
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // GSI for querying user's jobs
+    jobsTable.addGlobalSecondaryIndex({
+      indexName: 'user_sub-created_at-index',
+      partitionKey: { name: 'user_sub', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'created_at', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
 
     // --------- Create Amplify App for Manual Deployment ----------
     const amplifyApp = new amplify.App(this, 'pdfui-amplify-app', {
@@ -81,7 +99,8 @@ export class CdkBackendStack extends cdk.Stack {
       status: amplify.RedirectStatus.REWRITE
     }));
 
-    const domainPrefix = `pdf-ui-auth${Math.random().toString(36).substring(2, 8)}`; // must be globally unique in that region
+    // Use existing domain prefix if stack is already deployed (from context or default)
+    const domainPrefix = this.node.tryGetContext('DOMAIN_PREFIX') || 'pdf-ui-auth2p55do'; // must be globally unique in that region
     const Default_Group = 'DefaultUsers';
     const Amazon_Group = 'AmazonUsers';
     const Admin_Group = 'AdminUsers';
@@ -436,12 +455,183 @@ export class CdkBackendStack extends cdk.Stack {
     });
     
     cognitoGroupChangeRule.addTarget(new targets.LambdaFunction(updateAttributesGroupsFn));
-    
+
     updateAttributesGroupsFn.addPermission('AllowEventBridgeInvoke', {
       principal: new iam.ServicePrincipal('events.amazonaws.com'),
       sourceArn: cognitoGroupChangeRule.ruleArn,
     });
-    
+
+    // ------------------- Job Management Lambda Functions -------------------
+
+    // IAM Role for Job Management Lambdas
+    const jobManagementLambdaRole = new iam.Role(this, 'JobManagementLambdaRole', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      description: 'IAM role for Job Management Lambda functions',
+    });
+
+    jobManagementLambdaRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'dynamodb:GetItem',
+        'dynamodb:PutItem',
+        'dynamodb:UpdateItem',
+        'dynamodb:Query',
+        'logs:CreateLogGroup',
+        'logs:CreateLogStream',
+        'logs:PutLogEvents',
+      ],
+      resources: [
+        jobsTable.tableArn,
+        `${jobsTable.tableArn}/index/*`
+      ],
+    }));
+
+    // Grant S3 read access for analyze PDF Lambda
+    if (pdfBucket) {
+      jobManagementLambdaRole.addToPolicy(new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['s3:GetObject'],
+        resources: [`${pdfBucket.bucketArn}/*`],
+      }));
+    }
+
+    // Analyze PDF Lambda
+    const analyzePDFLambda = new lambda.Function(this, 'AnalyzePDFLambda', {
+      runtime: lambda.Runtime.PYTHON_3_9,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/analyzePDF/'),
+      timeout: cdk.Duration.seconds(60),
+      role: jobManagementLambdaRole,
+      environment: {
+        JOBS_TABLE_NAME: jobsTable.tableName,
+        PDF_BUCKET_NAME: pdfBucket ? pdfBucket.bucketName : '',
+      },
+    });
+
+    // Start Processing Lambda
+    const startProcessingLambda = new lambda.Function(this, 'StartProcessingLambda', {
+      runtime: lambda.Runtime.PYTHON_3_9,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/startProcessing/'),
+      timeout: cdk.Duration.seconds(30),
+      role: jobManagementLambdaRole,
+      environment: {
+        JOBS_TABLE_NAME: jobsTable.tableName,
+      },
+    });
+
+    // Get User Jobs Lambda
+    const getUserJobsLambda = new lambda.Function(this, 'GetUserJobsLambda', {
+      runtime: lambda.Runtime.PYTHON_3_9,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/getUserJobs/'),
+      timeout: cdk.Duration.seconds(30),
+      role: jobManagementLambdaRole,
+      environment: {
+        JOBS_TABLE_NAME: jobsTable.tableName,
+      },
+    });
+
+    // Get Job Lambda
+    const getJobLambda = new lambda.Function(this, 'GetJobLambda', {
+      runtime: lambda.Runtime.PYTHON_3_9,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/getJob/'),
+      timeout: cdk.Duration.seconds(30),
+      role: jobManagementLambdaRole,
+      environment: {
+        JOBS_TABLE_NAME: jobsTable.tableName,
+      },
+    });
+
+    // Create Job Lambda (for S3 event trigger)
+    const createJobLambda = new lambda.Function(this, 'CreateJobLambda', {
+      runtime: lambda.Runtime.PYTHON_3_9,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/createJob/'),
+      timeout: cdk.Duration.seconds(30),
+      role: jobManagementLambdaRole,
+      environment: {
+        JOBS_TABLE_NAME: jobsTable.tableName,
+        PDF_BUCKET_NAME: pdfBucket ? pdfBucket.bucketName : '',
+      },
+    });
+
+    // Cancel Job Lambda
+    const cancelJobLambda = new lambda.Function(this, 'CancelJobLambda', {
+      runtime: lambda.Runtime.PYTHON_3_9,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/cancelJob/'),
+      timeout: cdk.Duration.seconds(30),
+      role: jobManagementLambdaRole,
+      environment: {
+        JOBS_TABLE_NAME: jobsTable.tableName,
+      },
+    });
+
+    // Note: S3 event trigger would be added here if needed
+    // Since we're using imported buckets, we'll need to manually configure
+    // the S3 event trigger or call this Lambda from the frontend after upload
+
+    // ------------------- Jobs API Gateway -------------------
+    const jobsApi = new apigateway.RestApi(this, 'JobsApi', {
+      restApiName: 'PDF Jobs API',
+      description: 'API for managing PDF accessibility jobs',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+      },
+    });
+
+    // Use the existing Cognito authorizer from updateAttributesApi
+    const jobsAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'JobsAuthorizer', {
+      cognitoUserPools: [userPool],
+    });
+
+    // Create /jobs resource
+    const jobsResource = jobsApi.root.addResource('jobs');
+
+    // POST /jobs/analyze
+    const analyzeResource = jobsResource.addResource('analyze');
+    analyzeResource.addMethod('POST', new apigateway.LambdaIntegration(analyzePDFLambda), {
+      authorizer: jobsAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
+    // POST /jobs/start-processing
+    const startProcessingResource = jobsResource.addResource('start-processing');
+    startProcessingResource.addMethod('POST', new apigateway.LambdaIntegration(startProcessingLambda), {
+      authorizer: jobsAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
+    // GET /jobs/my-jobs
+    const myJobsResource = jobsResource.addResource('my-jobs');
+    myJobsResource.addMethod('GET', new apigateway.LambdaIntegration(getUserJobsLambda), {
+      authorizer: jobsAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
+    // GET /jobs/{job_id}
+    const jobIdResource = jobsResource.addResource('{job_id}');
+    jobIdResource.addMethod('GET', new apigateway.LambdaIntegration(getJobLambda), {
+      authorizer: jobsAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
+    // POST /jobs (create job)
+    jobsResource.addMethod('POST', new apigateway.LambdaIntegration(createJobLambda), {
+      authorizer: jobsAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
+    // POST /jobs/cancel
+    const cancelResource = jobsResource.addResource('cancel');
+    cancelResource.addMethod('POST', new apigateway.LambdaIntegration(cancelJobLambda), {
+      authorizer: jobsAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
     // --------------------------- Outputs ------------------------------
     new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
     new cdk.CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
@@ -464,6 +654,41 @@ export class CdkBackendStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'CheckUploadQuotaEndpoint', {
       value: updateAttributesApi.urlForPath('/upload-quota'),
+    });
+
+    new cdk.CfnOutput(this, 'JobsTableName', {
+      value: jobsTable.tableName,
+      description: 'DynamoDB table for job tracking',
+    });
+
+    new cdk.CfnOutput(this, 'AnalyzeJobEndpoint', {
+      value: jobsApi.urlForPath('/jobs/analyze'),
+      description: 'Endpoint to analyze PDF jobs',
+    });
+
+    new cdk.CfnOutput(this, 'StartProcessingEndpoint', {
+      value: jobsApi.urlForPath('/jobs/start-processing'),
+      description: 'Endpoint to start processing jobs',
+    });
+
+    new cdk.CfnOutput(this, 'GetUserJobsEndpoint', {
+      value: jobsApi.urlForPath('/jobs/my-jobs'),
+      description: 'Endpoint to get user jobs',
+    });
+
+    new cdk.CfnOutput(this, 'GetJobEndpoint', {
+      value: jobsApi.urlForPath('/jobs'),
+      description: 'Base endpoint to get job by ID (append /{job_id})',
+    });
+
+    new cdk.CfnOutput(this, 'CreateJobEndpoint', {
+      value: jobsApi.urlForPath('/jobs'),
+      description: 'Endpoint to create a new job (POST)',
+    });
+
+    new cdk.CfnOutput(this, 'CancelJobEndpoint', {
+      value: jobsApi.urlForPath('/jobs/cancel'),
+      description: 'Endpoint to cancel a job (POST)',
     });
 
 

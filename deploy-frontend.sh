@@ -63,6 +63,14 @@ REACT_APP_UPDATE_FIRST_SIGN_IN_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | sel
 REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "CheckUploadQuotaEndpoint") | .OutputValue')
 REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "UpdateAttributesApiEndpoint377B5108") | .OutputValue')
 
+# Job Management API Endpoints from CDK outputs
+REACT_APP_GET_USER_JOBS_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "GetUserJobsEndpoint") | .OutputValue')
+REACT_APP_GET_JOB_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "GetJobEndpoint") | .OutputValue')
+REACT_APP_CREATE_JOB_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "CreateJobEndpoint") | .OutputValue')
+REACT_APP_ANALYZE_JOB_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "AnalyzeJobEndpoint") | .OutputValue')
+REACT_APP_START_PROCESSING_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "StartProcessingEndpoint") | .OutputValue')
+REACT_APP_CANCEL_JOB_ENDPOINT=$(echo "$CDK_OUTPUTS" | jq -r '.[] | select(.OutputKey == "CancelJobEndpoint") | .OutputValue')
+
 # Validate required outputs
 if [ -z "$AMPLIFY_APP_ID" ] || [ "$AMPLIFY_APP_ID" = "null" ]; then
   echo "❌ Error: Could not find AmplifyAppId in CDK stack outputs"
@@ -143,13 +151,13 @@ add_frontend_env_var "REACT_APP_UPDATE_FIRST_SIGN_IN_ENDPOINT" "$REACT_APP_UPDAT
 add_frontend_env_var "REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT" "$REACT_APP_CHECK_UPLOAD_QUOTA_ENDPOINT"
 add_frontend_env_var "REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT" "$REACT_APP_UPDATE_ATTRIBUTES_API_ENDPOINT"
 
-# Job Management API Endpoints (from .env file)
-add_frontend_env_var "REACT_APP_GET_USER_JOBS_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs/my-jobs"
-add_frontend_env_var "REACT_APP_GET_JOB_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs"
-add_frontend_env_var "REACT_APP_CREATE_JOB_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs"
-add_frontend_env_var "REACT_APP_ANALYZE_JOB_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs/analyze"
-add_frontend_env_var "REACT_APP_START_PROCESSING_ENDPOINT" "https://moaipgewna.execute-api.us-east-2.amazonaws.com/prod/jobs/start-processing"
-add_frontend_env_var "REACT_APP_CANCEL_JOB_ENDPOINT" ""
+# Job Management API Endpoints (from CDK outputs)
+add_frontend_env_var "REACT_APP_GET_USER_JOBS_ENDPOINT" "$REACT_APP_GET_USER_JOBS_ENDPOINT"
+add_frontend_env_var "REACT_APP_GET_JOB_ENDPOINT" "$REACT_APP_GET_JOB_ENDPOINT"
+add_frontend_env_var "REACT_APP_CREATE_JOB_ENDPOINT" "$REACT_APP_CREATE_JOB_ENDPOINT"
+add_frontend_env_var "REACT_APP_ANALYZE_JOB_ENDPOINT" "$REACT_APP_ANALYZE_JOB_ENDPOINT"
+add_frontend_env_var "REACT_APP_START_PROCESSING_ENDPOINT" "$REACT_APP_START_PROCESSING_ENDPOINT"
+add_frontend_env_var "REACT_APP_CANCEL_JOB_ENDPOINT" "$REACT_APP_CANCEL_JOB_ENDPOINT"
 add_frontend_env_var "REACT_APP_ENABLE_PRE_ANALYSIS" "true"
 
 FRONTEND_ENVIRONMENT='{
