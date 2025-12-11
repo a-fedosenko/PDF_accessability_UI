@@ -4,7 +4,9 @@ import os
 from datetime import datetime, timezone
 
 dynamodb = boto3.resource('dynamodb')
+lambda_client = boto3.client('lambda')
 table_name = os.environ['JOBS_TABLE_NAME']
+split_pdf_lambda = os.environ.get('SPLIT_PDF_LAMBDA_ARN')
 table = dynamodb.Table(table_name)
 
 def handler(event, context):
@@ -65,8 +67,44 @@ def handler(event, context):
 
         updated_job = update_response['Attributes']
 
-        # Here you would trigger the actual PDF processing workflow
-        # For now, just return success
+        # Trigger the PDF processing workflow by invoking SplitPDF Lambda
+        if split_pdf_lambda:
+            try:
+                # Prepare payload for SplitPDF Lambda
+                split_payload = {
+                    's3_bucket': job.get('s3_bucket'),
+                    's3_key': job.get('s3_key'),
+                    'job_id': job_id,
+                    'user_sub': user_sub
+                }
+
+                print(f"Invoking SplitPDF Lambda with payload: {split_payload}")
+
+                # Invoke SplitPDF Lambda asynchronously
+                lambda_response = lambda_client.invoke(
+                    FunctionName=split_pdf_lambda,
+                    InvocationType='Event',  # Async invocation
+                    Payload=json.dumps(split_payload)
+                )
+
+                print(f"SplitPDF Lambda invoked successfully: {lambda_response}")
+
+            except Exception as lambda_error:
+                print(f"Error invoking SplitPDF Lambda: {str(lambda_error)}")
+                # Update job status to FAILED
+                table.update_item(
+                    Key={'job_id': job_id},
+                    UpdateExpression='SET #status = :status, error_message = :error, updated_at = :updated_at',
+                    ExpressionAttributeNames={'#status': 'status'},
+                    ExpressionAttributeValues={
+                        ':status': 'FAILED',
+                        ':error': f'Failed to start processing: {str(lambda_error)}',
+                        ':updated_at': datetime.now(timezone.utc).isoformat()
+                    }
+                )
+                raise
+        else:
+            print("Warning: SPLIT_PDF_LAMBDA_ARN not configured")
 
         return {
             'statusCode': 200,

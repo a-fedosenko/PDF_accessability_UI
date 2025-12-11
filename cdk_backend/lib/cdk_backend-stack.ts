@@ -479,10 +479,12 @@ export class CdkBackendStack extends cdk.Stack {
         'logs:CreateLogGroup',
         'logs:CreateLogStream',
         'logs:PutLogEvents',
+        'lambda:InvokeFunction', // For invoking SplitPDF Lambda
       ],
       resources: [
         jobsTable.tableArn,
-        `${jobsTable.tableArn}/index/*`
+        `${jobsTable.tableArn}/index/*`,
+        'arn:aws:lambda:us-east-2:471414695760:function:PDFAccessibility-SplitPDFE6095B5B-MBe4CupusdOV', // SplitPDF Lambda
       ],
     }));
 
@@ -508,6 +510,9 @@ export class CdkBackendStack extends cdk.Stack {
       },
     });
 
+    // Reference to the existing SplitPDF Lambda from PDFAccessibility stack
+    const splitPDFLambdaArn = 'arn:aws:lambda:us-east-2:471414695760:function:PDFAccessibility-SplitPDFE6095B5B-MBe4CupusdOV';
+
     // Start Processing Lambda
     const startProcessingLambda = new lambda.Function(this, 'StartProcessingLambda', {
       runtime: lambda.Runtime.PYTHON_3_9,
@@ -517,6 +522,7 @@ export class CdkBackendStack extends cdk.Stack {
       role: jobManagementLambdaRole,
       environment: {
         JOBS_TABLE_NAME: jobsTable.tableName,
+        SPLIT_PDF_LAMBDA_ARN: splitPDFLambdaArn,
       },
     });
 
