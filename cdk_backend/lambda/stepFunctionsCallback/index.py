@@ -40,20 +40,37 @@ def handler(event, context):
         if not job_id and s3_key:
             print(f"Trying to find job by s3_key: {s3_key}")
             try:
-                # Scan for job with matching s3_key in processing_metadata
-                response = table.scan(
-                    FilterExpression='processing_metadata.s3_key = :s3_key',
-                    ExpressionAttributeValues={':s3_key': s3_key},
-                    Limit=1
-                )
-                if response.get('Items'):
-                    job_id = response['Items'][0]['job_id']
-                    print(f"Found job_id by s3_key: {job_id}")
-                else:
-                    print(f"No job found with s3_key: {s3_key}")
-                    return {'statusCode': 404, 'body': 'Job not found'}
+                # Extract just the filename from s3_key (pdf/filename.pdf -> filename.pdf -> job_id)
+                # The job_id is the filename without .pdf extension
+                filename = s3_key.split('/')[-1]  # Get last part after /
+                potential_job_id = filename.replace('.pdf', '')
+                print(f"Extracted potential job_id from s3_key: {potential_job_id}")
+
+                # Try to get the job directly by this ID
+                try:
+                    response = table.get_item(Key={'job_id': potential_job_id})
+                    if 'Item' in response:
+                        job_id = potential_job_id
+                        print(f"Found job by extracted ID: {job_id}")
+                    else:
+                        print(f"No job found with job_id: {potential_job_id}")
+                        # Try scanning by s3_key as fallback
+                        from boto3.dynamodb.conditions import Attr
+                        response = table.scan(
+                            FilterExpression=Attr('s3_key').eq(s3_key),
+                            Limit=1
+                        )
+                        if response.get('Items'):
+                            job_id = response['Items'][0]['job_id']
+                            print(f"Found job_id by s3_key scan: {job_id}")
+                        else:
+                            print(f"No job found with s3_key: {s3_key}")
+                            return {'statusCode': 404, 'body': 'Job not found'}
+                except Exception as get_error:
+                    print(f"Error getting job by ID: {str(get_error)}")
+                    return {'statusCode': 500, 'body': f'Error finding job: {str(get_error)}'}
             except Exception as scan_error:
-                print(f"Error scanning for job: {str(scan_error)}")
+                print(f"Error processing s3_key: {str(scan_error)}")
                 return {'statusCode': 500, 'body': f'Error finding job: {str(scan_error)}'}
 
         print(f"Processing callback for job_id: {job_id}, status: {status}")
@@ -70,11 +87,8 @@ def handler(event, context):
             if match:
                 processed_filename = match.group(1)
                 # Construct the S3 key
-                s3_bucket = input_data.get('s3_bucket')
-                original_key = input_data.get('s3_key', '')
-                # The processed file is typically in a specific location
-                # Based on the output, it seems to be in the root or uploads folder
-                processed_file_key = f"uploads/{processed_filename}"
+                # The processed file is in result/ folder based on PDFAccessibility stack
+                processed_file_key = f"result/{processed_filename}"
                 print(f"Extracted processed file key: {processed_file_key}")
 
         # Update job status in DynamoDB

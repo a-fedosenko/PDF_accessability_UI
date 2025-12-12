@@ -48,7 +48,10 @@ function AccessibilityChecker({ originalFileName, updatedFilename, awsCredential
   const [isAfterUrlLoading, setIsAfterUrlLoading] = useState(false);
 
 
-  const UpdatedFileKeyWithoutExtension = updatedFilename ? updatedFilename.replace(/\.pdf$/i, '') : '';
+  // Remove pdf/ prefix if present and remove .pdf extension
+  const UpdatedFileKeyWithoutExtension = updatedFilename
+    ? updatedFilename.replace(/^pdf\//, '').replace(/\.pdf$/i, '')
+    : '';
   const beforeReportKey = `temp/${UpdatedFileKeyWithoutExtension}/accessability-report/${UpdatedFileKeyWithoutExtension}_accessibility_report_before_remidiation.json`;
   const afterReportKey = `temp/${UpdatedFileKeyWithoutExtension}/accessability-report/COMPLIANT_${UpdatedFileKeyWithoutExtension}_accessibility_report_after_remidiation.json`;
 
