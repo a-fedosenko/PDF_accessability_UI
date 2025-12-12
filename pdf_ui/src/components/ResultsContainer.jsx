@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import './ResultsContainer.css';
 import img1 from "../assets/zap.svg";
 import AccessibilityChecker from './AccessibilityChecker';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { PDFBucket, region } from '../utilities/constants';
 
 const ResultsContainer = ({
   fileName,
@@ -17,6 +20,35 @@ const ResultsContainer = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Initialize S3 client
+  const s3 = useMemo(() => {
+    if (!awsCredentials?.accessKeyId) {
+      console.warn('AWS credentials not available yet');
+      return null;
+    }
+    return new S3Client({
+      region,
+      credentials: {
+        accessKeyId: awsCredentials.accessKeyId,
+        secretAccessKey: awsCredentials.secretAccessKey,
+        sessionToken: awsCredentials.sessionToken,
+      },
+    });
+  }, [awsCredentials]);
+
+  // Generate presigned URL for download
+  const generatePresignedUrl = useCallback(async (key, filename) => {
+    if (!s3) {
+      throw new Error('S3 client not initialized');
+    }
+    const command = new GetObjectCommand({
+      Bucket: PDFBucket,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${filename}"`,
+    });
+    return await getSignedUrl(s3, command, { expiresIn: 30000 }); // 8.33 hour expiration
+  }, [s3]);
 
   // Function to format processing time
   const formatProcessingTime = (seconds) => {
@@ -41,11 +73,18 @@ const ResultsContainer = ({
     try {
       console.log('Starting download for:', { fileName, format });
 
-      // Use the download URL passed from ProcessingContainer
-      const downloadUrl = processedResult.url;
+      // Check if processedResult.url is already a presigned URL or an S3 key
+      let downloadUrl = processedResult.url;
 
       if (!downloadUrl) {
         throw new Error('No download URL received');
+      }
+
+      // If the URL is an S3 key (doesn't start with http), generate presigned URL
+      if (!downloadUrl.startsWith('http')) {
+        console.log('Generating presigned URL for S3 key:', downloadUrl);
+        const desiredFilename = `COMPLIANT_${fileName}`;
+        downloadUrl = await generatePresignedUrl(downloadUrl, desiredFilename);
       }
 
       console.log('Using download URL:', downloadUrl);
