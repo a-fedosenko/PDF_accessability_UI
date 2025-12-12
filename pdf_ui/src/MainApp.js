@@ -71,6 +71,9 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  // Session recovery state - track if we've already recovered
+  const [sessionRecovered, setSessionRecovered] = useState(false);
+
 
   // Fetch credentials once user is authenticated
   useEffect(() => {
@@ -468,10 +471,11 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
   // FUNCTION: Session Recovery - Fetch user's active jobs on mount
   const recoverSession = useCallback(async () => {
-    if (!auth.isAuthenticated || !GetUserJobsEndpoint) return;
+    if (!auth.isAuthenticated || !GetUserJobsEndpoint || sessionRecovered) return;
 
     try {
       console.log('Recovering session - fetching user jobs...');
+      setSessionRecovered(true);
       const response = await fetch(GetUserJobsEndpoint, {
         headers: {
           Authorization: `Bearer ${auth.user.id_token}`
@@ -522,7 +526,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     } catch (error) {
       console.error('Session recovery failed:', error);
     }
-  }, [auth.isAuthenticated, auth.user, GetUserJobsEndpoint, startPollingJob]);
+  }, [auth.isAuthenticated, auth.user, GetUserJobsEndpoint, startPollingJob, sessionRecovered]);
 
   // Session recovery on mount
   useEffect(() => {

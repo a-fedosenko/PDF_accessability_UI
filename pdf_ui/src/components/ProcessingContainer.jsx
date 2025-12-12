@@ -17,7 +17,6 @@ const ProcessingContainer = ({
   const [isFileReady, setIsFileReady] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [pollingAttempts, setPollingAttempts] = useState(0);
 
   const processingSteps = [
     { title: "Analyzing Document Structure", description: "Scanning PDF for accessibility issues" },
@@ -74,27 +73,24 @@ const ProcessingContainer = ({
     let intervalId;
     let timeIntervalId;
     let stepIntervalId;
+    let attempts = 0; // Local variable instead of state
 
     const checkFileAvailability = async () => {
       // Maximum polling time: 30 minutes (120 attempts * 15 seconds = 30 minutes)
       const MAX_POLLING_ATTEMPTS = 120;
 
       try {
-        // Increment polling attempts
-        setPollingAttempts(prev => {
-          const newAttempts = prev + 1;
+        // Increment local attempts counter
+        attempts += 1;
 
-          // Stop polling after maximum attempts
-          if (newAttempts >= MAX_POLLING_ATTEMPTS) {
-            console.warn('⚠️ Maximum polling attempts reached. Stopping file check.');
-            clearInterval(intervalId);
-            clearInterval(timeIntervalId);
-            clearInterval(stepIntervalId);
-            return newAttempts;
-          }
-
-          return newAttempts;
-        });
+        // Stop polling after maximum attempts
+        if (attempts >= MAX_POLLING_ATTEMPTS) {
+          console.warn('⚠️ Maximum polling attempts reached. Stopping file check.');
+          clearInterval(intervalId);
+          clearInterval(timeIntervalId);
+          clearInterval(stepIntervalId);
+          return;
+        }
 
         // Select the correct bucket based on format (same logic as UploadSection)
         const selectedBucket = selectedFormat === 'html' ? HTMLBucket : PDFBucket;
@@ -154,7 +150,7 @@ const ProcessingContainer = ({
           objectKey = `result/COMPLIANT_${updatedFilename}`;
         }
 
-        console.log(`🔍 Polling attempt ${pollingAttempts + 1}/${MAX_POLLING_ATTEMPTS} for object key:`, objectKey);
+        console.log(`🔍 Polling attempt ${attempts}/${MAX_POLLING_ATTEMPTS} for object key:`, objectKey);
 
         // Check if the processed file exists
         await s3.send(
@@ -182,18 +178,17 @@ const ProcessingContainer = ({
         console.log('✅ File processing completed successfully!');
       } catch (error) {
         // Log error for debugging but continue polling (file not ready yet)
-        console.log(`⏳ File not ready yet (attempt ${pollingAttempts + 1}). Retrying in 15 seconds...`);
+        console.log(`⏳ File not ready yet (attempt ${attempts}). Retrying in 15 seconds...`);
 
         // If this is the last attempt, show an error
-        if (pollingAttempts + 1 >= MAX_POLLING_ATTEMPTS) {
+        if (attempts >= MAX_POLLING_ATTEMPTS) {
           console.error('❌ File processing timed out after maximum attempts');
         }
       }
     };
 
     if (updatedFilename && !isFileReady) {
-      // Reset polling attempts for new file
-      setPollingAttempts(0);
+      // No need to reset attempts - it's a local variable
 
       // Start time tracking
       timeIntervalId = setInterval(() => {
@@ -214,7 +209,7 @@ const ProcessingContainer = ({
       clearInterval(timeIntervalId);
       clearInterval(stepIntervalId);
     };
-  }, [updatedFilename, isFileReady, onFileReady, awsCredentials, originalFileName, selectedFormat, generatePresignedUrl, processingSteps.length, pollingAttempts]);
+  }, [updatedFilename, isFileReady, onFileReady, awsCredentials, originalFileName, selectedFormat, generatePresignedUrl, processingSteps.length]);
 
 
   return (
