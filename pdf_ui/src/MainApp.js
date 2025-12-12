@@ -343,6 +343,11 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
             setAnalysisData(job);
             setCurrentPage('analysis-results');
           } else if (job.status === 'COMPLETED') {
+            // Update uploadedFile with the actual s3_key from the job (needed for reports)
+            setUploadedFile(prev => ({
+              ...prev,
+              updatedName: job.s3_key // Use the actual S3 key path from the job
+            }));
             setProcessedResult({ url: job.processed_s3_key });
             setCurrentPage('results');
           } else if (job.status === 'FAILED') {

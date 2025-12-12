@@ -40,10 +40,12 @@ def handler(event, context):
         if not job_id and s3_key:
             print(f"Trying to find job by s3_key: {s3_key}")
             try:
-                # Extract just the filename from s3_key (pdf/filename.pdf -> filename.pdf -> job_id)
-                # The job_id is the filename without .pdf extension
+                # Extract just the filename from s3_key (temp/dir/filename_chunk_1.pdf -> filename)
+                # The job_id is the filename without .pdf extension and without _chunk_N suffix
                 filename = s3_key.split('/')[-1]  # Get last part after /
                 potential_job_id = filename.replace('.pdf', '')
+                # Remove _chunk_N suffix if present (e.g., filename_chunk_1 -> filename)
+                potential_job_id = re.sub(r'_chunk_\d+$', '', potential_job_id)
                 print(f"Extracted potential job_id from s3_key: {potential_job_id}")
 
                 # Try to get the job directly by this ID

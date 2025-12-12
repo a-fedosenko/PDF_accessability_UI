@@ -512,9 +512,6 @@ export class CdkBackendStack extends cdk.Stack {
         'dynamodb:PutItem',
         'dynamodb:UpdateItem',
         'dynamodb:Query',
-        'logs:CreateLogGroup',
-        'logs:CreateLogStream',
-        'logs:PutLogEvents',
         'lambda:InvokeFunction', // For invoking SplitPDF Lambda
       ],
       resources: [
@@ -522,6 +519,17 @@ export class CdkBackendStack extends cdk.Stack {
         `${jobsTable.tableArn}/index/*`,
         'arn:aws:lambda:us-east-2:471414695760:function:PDFAccessibility-SplitPDFE6095B5B-MBe4CupusdOV', // SplitPDF Lambda
       ],
+    }));
+
+    // CloudWatch Logs permissions for all job management Lambdas
+    jobManagementLambdaRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'logs:CreateLogGroup',
+        'logs:CreateLogStream',
+        'logs:PutLogEvents',
+      ],
+      resources: ['*'],
     }));
 
     // Grant S3 read access for analyze PDF Lambda
