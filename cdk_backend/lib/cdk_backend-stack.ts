@@ -62,15 +62,49 @@ export class CdkBackendStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
-    // --------- Create Amplify App for Manual Deployment ----------
+    // --------- GitHub Token from Secrets Manager ----------
+    const githubToken = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'GitHubToken',
+      'github-token-pdf-accessibility'
+    );
+
+    // --------- Create Amplify App with GitHub Connection ----------
     const amplifyApp = new amplify.App(this, 'pdfui-amplify-app', {
-      description: 'PDF Accessibility UI - Manual Deployment',
-      // No sourceCodeProvider for manual deployment
+      description: 'PDF Accessibility UI - Auto-deploy from GitHub',
+      sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
+        owner: 'a-fedosenko',
+        repository: 'PDF_accessability_UI',
+        oauthToken: githubToken.secretValue,
+      }),
+      buildSpec: cdk.aws_codebuild.BuildSpec.fromObjectToYaml({
+        version: '1.0',
+        frontend: {
+          phases: {
+            preBuild: {
+              commands: [
+                'cd pdf_ui',
+                'npm ci',
+              ],
+            },
+            build: {
+              commands: ['npm run build'],
+            },
+          },
+          artifacts: {
+            baseDirectory: 'pdf_ui/build',
+            files: ['**/*'],
+          },
+          cache: {
+            paths: ['pdf_ui/node_modules/**/*'],
+          },
+        },
+      }),
     });
 
-    // Create main branch for manual deployment
+    // Create main branch with auto-build enabled
     const mainBranch = amplifyApp.addBranch('main', {
-      autoBuild: false, // Manual deployment
+      autoBuild: true, // Enable auto-build on push
       stage: 'PRODUCTION'
     });
 
@@ -384,7 +418,7 @@ export class CdkBackendStack extends cdk.Stack {
     if (PDF_TO_HTML_BUCKET) {
       mainBranch.addEnvironment('REACT_APP_HTML_BUCKET_NAME', PDF_TO_HTML_BUCKET);
     }
-    
+
     mainBranch.addEnvironment('REACT_APP_USER_POOL_ID', userPool.userPoolId);
     mainBranch.addEnvironment('REACT_APP_AUTHORITY', Authority);
 
@@ -396,6 +430,8 @@ export class CdkBackendStack extends cdk.Stack {
     mainBranch.addEnvironment('REACT_APP_UPDATE_FIRST_SIGN_IN', updateAttributesApi.urlForPath('/update-first-sign-in'));
     mainBranch.addEnvironment('REACT_APP_UPLOAD_QUOTA_API', updateAttributesApi.urlForPath('/upload-quota'));
 
+    // Job Management API Endpoints - added after jobsApi is defined below
+    // These will be added after the jobsApi creation
 
      // ------------------- Integration of UpdateAttributesGroups Lambda -------------------
     // 1. Create IAM Role
@@ -677,6 +713,15 @@ export class CdkBackendStack extends cdk.Stack {
       authorizer: jobsAuthorizer,
       authorizationType: apigateway.AuthorizationType.COGNITO,
     });
+
+    // Add Job Management API endpoints to Amplify environment variables
+    mainBranch.addEnvironment('REACT_APP_GET_USER_JOBS_ENDPOINT', jobsApi.urlForPath('/jobs/my-jobs'));
+    mainBranch.addEnvironment('REACT_APP_GET_JOB_ENDPOINT', jobsApi.urlForPath('/jobs'));
+    mainBranch.addEnvironment('REACT_APP_CREATE_JOB_ENDPOINT', jobsApi.urlForPath('/jobs'));
+    mainBranch.addEnvironment('REACT_APP_ANALYZE_JOB_ENDPOINT', jobsApi.urlForPath('/jobs/analyze'));
+    mainBranch.addEnvironment('REACT_APP_START_PROCESSING_ENDPOINT', jobsApi.urlForPath('/jobs/start-processing'));
+    mainBranch.addEnvironment('REACT_APP_CANCEL_JOB_ENDPOINT', jobsApi.urlForPath('/jobs/cancel'));
+    mainBranch.addEnvironment('REACT_APP_ENABLE_PRE_ANALYSIS', 'true'); // Feature flag
 
     // --------------------------- Outputs ------------------------------
     new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });

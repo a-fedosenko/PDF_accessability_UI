@@ -268,9 +268,9 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
       const uniqueFilename = `${sanitizedEmail}_${timestamp}_${sanitizedFileName}`; // Combined unique filename
 
       // Select bucket and directory based on format
-      // NEW: Changed to uploads/{user_sub}/ for stateful job tracking
+      // Use pdf/ prefix to match PDFAccessibility stack expectations
       const selectedBucket = selectedFormat === 'html' ? HTMLBucket : PDFBucket;
-      const keyPrefix = `uploads/${userSub}/`;
+      const keyPrefix = 'pdf/';
 
       // Generate unique job_id using timestamp and random suffix for uniqueness
       // Replace spaces and special characters with underscores to ensure URL-safety
