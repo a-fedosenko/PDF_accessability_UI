@@ -492,6 +492,82 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     setAnalysisData(null);
   };
 
+  // FUNCTION: Handle download from job table
+  const handleDownloadJob = useCallback(async (job) => {
+    if (!job.processed_s3_key) {
+      console.error('No processed file available for download');
+      alert('No processed file available for this job.');
+      return;
+    }
+
+    try {
+      console.log('Downloading job:', job.job_id, 'S3 key:', job.processed_s3_key);
+      console.log('Current awsCredentials state:', awsCredentials ? 'Present' : 'Missing');
+      console.log('awsCredentials.accessKeyId:', awsCredentials?.accessKeyId ? 'Present' : 'Missing');
+
+      // Check if we need credentials for generating presigned URL
+      if (!awsCredentials?.accessKeyId) {
+        console.error('AWS credentials not available for download');
+        console.error('Full awsCredentials object:', awsCredentials);
+        alert('Initializing download... Please wait a moment and try again.');
+        return;
+      }
+
+      // Create S3 client (same approach as ResultsContainer)
+      const s3Client = new S3Client({
+        region,
+        credentials: {
+          accessKeyId: awsCredentials.accessKeyId,
+          secretAccessKey: awsCredentials.secretAccessKey,
+          sessionToken: awsCredentials.sessionToken,
+        },
+      });
+
+      // Generate presigned URL (same as ResultsContainer)
+      const command = new GetObjectCommand({
+        Bucket: PDFBucket,
+        Key: job.processed_s3_key,
+        ResponseContentDisposition: `attachment; filename="COMPLIANT_${job.file_name}"`,
+      });
+
+      const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 30000 }); // 8.33 hours, same as ResultsContainer
+      console.log('Generated download URL');
+
+      // Trigger download (same method as ResultsContainer)
+      const downloadWindow = window.open(downloadUrl, '_blank');
+
+      // Fallback if popup blocked
+      if (!downloadWindow || downloadWindow.closed) {
+        console.log('Popup blocked, using link method');
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.target = '_blank';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Close popup after download starts
+        setTimeout(() => {
+          if (downloadWindow && !downloadWindow.closed) {
+            downloadWindow.close();
+          }
+        }, 1000);
+      }
+
+      console.log('Download initiated successfully');
+    } catch (error) {
+      console.error('Download failed:', error);
+
+      // Same error handling as ResultsContainer
+      let errorMessage = 'Download failed. Please try again.';
+      if (error.message && error.message.includes('credentials')) {
+        errorMessage = 'Authentication error. Please refresh the page and try again.';
+      }
+      alert(errorMessage);
+    }
+  }, [awsCredentials]);
+
   // FUNCTION: Handle job selection from job history table
   const handleSelectJob = useCallback((job, action) => {
     console.log('Job selected:', job.job_id, 'Action:', action);
@@ -608,82 +684,6 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
       setStartingJobId(null);
     }
   };
-
-  // FUNCTION: Handle download from job table
-  const handleDownloadJob = useCallback(async (job) => {
-    if (!job.processed_s3_key) {
-      console.error('No processed file available for download');
-      alert('No processed file available for this job.');
-      return;
-    }
-
-    try {
-      console.log('Downloading job:', job.job_id, 'S3 key:', job.processed_s3_key);
-      console.log('Current awsCredentials state:', awsCredentials ? 'Present' : 'Missing');
-      console.log('awsCredentials.accessKeyId:', awsCredentials?.accessKeyId ? 'Present' : 'Missing');
-
-      // Check if we need credentials for generating presigned URL
-      if (!awsCredentials?.accessKeyId) {
-        console.error('AWS credentials not available for download');
-        console.error('Full awsCredentials object:', awsCredentials);
-        alert('Initializing download... Please wait a moment and try again.');
-        return;
-      }
-
-      // Create S3 client (same approach as ResultsContainer)
-      const s3Client = new S3Client({
-        region,
-        credentials: {
-          accessKeyId: awsCredentials.accessKeyId,
-          secretAccessKey: awsCredentials.secretAccessKey,
-          sessionToken: awsCredentials.sessionToken,
-        },
-      });
-
-      // Generate presigned URL (same as ResultsContainer)
-      const command = new GetObjectCommand({
-        Bucket: PDFBucket,
-        Key: job.processed_s3_key,
-        ResponseContentDisposition: `attachment; filename="COMPLIANT_${job.file_name}"`,
-      });
-
-      const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 30000 }); // 8.33 hours, same as ResultsContainer
-      console.log('Generated download URL');
-
-      // Trigger download (same method as ResultsContainer)
-      const downloadWindow = window.open(downloadUrl, '_blank');
-
-      // Fallback if popup blocked
-      if (!downloadWindow || downloadWindow.closed) {
-        console.log('Popup blocked, using link method');
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.target = '_blank';
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        // Close popup after download starts
-        setTimeout(() => {
-          if (downloadWindow && !downloadWindow.closed) {
-            downloadWindow.close();
-          }
-        }, 1000);
-      }
-
-      console.log('Download initiated successfully');
-    } catch (error) {
-      console.error('Download failed:', error);
-
-      // Same error handling as ResultsContainer
-      let errorMessage = 'Download failed. Please try again.';
-      if (error.message && error.message.includes('credentials')) {
-        errorMessage = 'Authentication error. Please refresh the page and try again.';
-      }
-      alert(errorMessage);
-    }
-  }, [awsCredentials]);
 
   // FUNCTION: Handle job cancellation from table
   const handleCancelJob = async (jobId) => {
