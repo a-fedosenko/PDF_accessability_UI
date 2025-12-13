@@ -26,8 +26,12 @@ import {
   StartProcessingEndpoint,
   CancelJobEndpoint,
   DeleteJobEndpoint,
-  EnablePreAnalysis
+  EnablePreAnalysis,
+  PDFBucket,
+  region
 } from './utilities/constants';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import CustomCredentialsProvider from './utilities/CustomCredentialsProvider';
 import DeploymentPopup from './components/DeploymentPopup';
 import { pollForAnalysis } from './utilities/analysisService';
@@ -530,8 +534,8 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
         break;
 
       case 'download':
-        // COMPLETED - trigger download directly (handled by ResultsContainer)
-        handleSelectJob(job, 'view-result');
+        // COMPLETED - trigger download directly
+        handleDownloadJob(job);
         break;
 
       case 'cancel':
@@ -601,6 +605,70 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
       setCurrentPage('upload');
     } finally {
       setStartingJobId(null);
+    }
+  };
+
+  // FUNCTION: Handle download from job table
+  const handleDownloadJob = async (job) => {
+    if (!job.processed_s3_key) {
+      console.error('No processed file available for download');
+      return;
+    }
+
+    if (!awsCredentials?.accessKeyId) {
+      console.error('AWS credentials not available');
+      return;
+    }
+
+    try {
+      console.log('Downloading job:', job.job_id, 'S3 key:', job.processed_s3_key);
+
+      // Create S3 client
+      const s3Client = new S3Client({
+        region,
+        credentials: {
+          accessKeyId: awsCredentials.accessKeyId,
+          secretAccessKey: awsCredentials.secretAccessKey,
+          sessionToken: awsCredentials.sessionToken,
+        },
+      });
+
+      // Generate presigned URL
+      const command = new GetObjectCommand({
+        Bucket: PDFBucket,
+        Key: job.processed_s3_key,
+        ResponseContentDisposition: `attachment; filename="COMPLIANT_${job.file_name}"`,
+      });
+
+      const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+      console.log('Generated download URL');
+
+      // Trigger download
+      const downloadWindow = window.open(downloadUrl, '_blank');
+
+      // Fallback if popup blocked
+      if (!downloadWindow || downloadWindow.closed) {
+        console.log('Popup blocked, using link method');
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.target = '_blank';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Close popup after download starts
+        setTimeout(() => {
+          if (downloadWindow && !downloadWindow.closed) {
+            downloadWindow.close();
+          }
+        }, 1000);
+      }
+
+      console.log('Download initiated successfully');
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Download failed. Please try again or use the View Result button to access the file.');
     }
   };
 
