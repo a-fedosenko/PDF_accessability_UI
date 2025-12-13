@@ -82,6 +82,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const [jobsToShow, setJobsToShow] = useState(5);
   const [hasActiveJob, setHasActiveJob] = useState(false);
   const [loadingJobs, setLoadingJobs] = useState(false);
+  const [startingJobId, setStartingJobId] = useState(null);
 
 
   // Fetch credentials once user is authenticated
@@ -510,7 +511,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
       case 'start-processing':
         // Start processing from ANALYSIS_COMPLETE
-        handleStartProcessingFromFileActions();
+        handleStartProcessingFromTable(job);
         break;
 
       case 'view-result':
@@ -544,6 +545,61 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
         console.warn('Unknown action:', action);
     }
   }, []);
+
+  // FUNCTION: Handle "Start Processing" from job table
+  const handleStartProcessingFromTable = async (job) => {
+    if (!StartProcessingEndpoint) return;
+
+    try {
+      console.log('Starting processing for job from table:', job.job_id);
+      setStartingJobId(job.job_id);
+
+      // Set up the uploadedFile data needed for ProcessingContainer
+      setUploadedFile({
+        name: job.file_name,
+        updatedName: job.s3_key,
+        format: 'pdf',
+        jobId: job.job_id,
+        size: job.file_size_mb
+      });
+
+      setProcessingStartTime(Date.now());
+      setCurrentPage('processing');
+
+      const response = await fetch(StartProcessingEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${auth.user.id_token}`
+        },
+        body: JSON.stringify({ job_id: job.job_id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start processing');
+      }
+
+      // Start polling for completion
+      startPollingJob(job.job_id);
+
+      // Update job status in local state to PROCESSING
+      setAllJobs(prev => prev.map(j =>
+        j.job_id === job.job_id ? { ...j, status: 'PROCESSING' } : j
+      ));
+      setDisplayedJobs(prev => prev.map(j =>
+        j.job_id === job.job_id ? { ...j, status: 'PROCESSING' } : j
+      ));
+
+      // Re-check active jobs
+      checkForActiveJobs();
+    } catch (error) {
+      console.error('Failed to start processing:', error);
+      setAnalysisError(error.message || 'Failed to start processing');
+      setCurrentPage('upload');
+    } finally {
+      setStartingJobId(null);
+    }
+  };
 
   // FUNCTION: Handle job cancellation from table
   const handleCancelJob = async (jobId) => {
@@ -783,6 +839,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
                   onLoadMore={handleLoadMoreJobs}
                   hasMore={displayedJobs.length < allJobs.length}
                   loading={loadingJobs}
+                  startingJobId={startingJobId}
                 />
               </>
             )}

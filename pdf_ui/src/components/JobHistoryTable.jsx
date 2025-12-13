@@ -38,6 +38,7 @@ const JobHistoryTable = ({
   onLoadMore,
   hasMore,
   loading,
+  startingJobId = null,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState(null);
@@ -134,6 +135,7 @@ const JobHistoryTable = ({
                 size="small"
                 color="primary"
                 onClick={() => onSelectJob(job, 'view-analysis')}
+                disabled={startingJobId === job_id}
               >
                 <AssessmentIcon />
               </IconButton>
@@ -143,8 +145,9 @@ const JobHistoryTable = ({
                 size="small"
                 color="success"
                 onClick={() => onSelectJob(job, 'start-processing')}
+                disabled={startingJobId === job_id}
               >
-                <PlayIcon />
+                {startingJobId === job_id ? <CircularProgress size={20} /> : <PlayIcon />}
               </IconButton>
             </Tooltip>
             <Tooltip title="Delete">
@@ -152,7 +155,7 @@ const JobHistoryTable = ({
                 size="small"
                 color="error"
                 onClick={() => handleDeleteClick(job)}
-                disabled={deletingJobId === job_id}
+                disabled={deletingJobId === job_id || startingJobId === job_id}
               >
                 {deletingJobId === job_id ? <CircularProgress size={20} /> : <DeleteIcon />}
               </IconButton>
