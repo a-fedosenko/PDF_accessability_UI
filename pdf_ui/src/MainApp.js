@@ -612,11 +612,13 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const handleDownloadJob = async (job) => {
     if (!job.processed_s3_key) {
       console.error('No processed file available for download');
+      alert('No processed file available for this job.');
       return;
     }
 
     if (!awsCredentials?.accessKeyId) {
       console.error('AWS credentials not available');
+      alert('Initializing download... Please wait a moment and try again.');
       return;
     }
 
