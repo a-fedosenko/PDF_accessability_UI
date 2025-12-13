@@ -19,7 +19,6 @@ const ResultsContainer = ({
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Initialize S3 client
   const s3 = useMemo(() => {
@@ -201,43 +200,11 @@ const ResultsContainer = ({
       )}
 
         <div className="upload-new-section">
-          <button className="upload-new-btn" onClick={() => setShowConfirmDialog(true)}>
-            Upload a New PDF
+          <button className="upload-new-btn" onClick={onNewUpload}>
+            Back to Main Page
           </button>
         </div>
       </div>
-
-      {/* Custom Confirmation Dialog */}
-      {showConfirmDialog && (
-        <div className="confirm-overlay" onClick={() => setShowConfirmDialog(false)}>
-          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="confirm-header">
-              <h3>Confirm New Upload</h3>
-            </div>
-            <div className="confirm-body">
-              <p>Are you sure you want to upload a new PDF?</p>
-              <p className="confirm-warning">This will discard the current PDF and start a new session.</p>
-            </div>
-            <div className="confirm-actions">
-              <button
-                className="confirm-btn cancel-btn"
-                onClick={() => setShowConfirmDialog(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="confirm-btn confirm-btn-primary"
-                onClick={() => {
-                  setShowConfirmDialog(false);
-                  onNewUpload();
-                }}
-              >
-                Yes, Upload New PDF
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

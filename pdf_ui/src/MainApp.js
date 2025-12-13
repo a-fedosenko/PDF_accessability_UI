@@ -307,6 +307,9 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     setAnalysisError('');
     setCurrentJob(null);
     setJobStatus(null);
+
+    // Refresh jobs list to show updated statuses
+    refreshJobs();
   };
 
   // ========== NEW JOB MANAGEMENT HANDLERS ==========
@@ -698,6 +701,58 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
   useEffect(() => {
     checkForActiveJobs();
   }, [allJobs, checkForActiveJobs]);
+
+  // FUNCTION: Refresh jobs list from API
+  const refreshJobs = useCallback(async () => {
+    if (!auth.isAuthenticated || !GetUserJobsEndpoint) return;
+
+    try {
+      console.log('Refreshing jobs list...');
+      setLoadingJobs(true);
+
+      const response = await fetch(GetUserJobsEndpoint, {
+        headers: {
+          Authorization: `Bearer ${auth.user.id_token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch user jobs:', response.statusText);
+        setLoadingJobs(false);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Jobs refreshed:', data);
+
+      if (data.jobs && data.jobs.length > 0) {
+        // Store all jobs
+        setAllJobs(data.jobs);
+        // Maintain current display limit (jobsToShow)
+        setDisplayedJobs(data.jobs.slice(0, jobsToShow));
+
+        // Check if there's an active job (ANALYZING or PROCESSING only)
+        const activeJob = data.jobs.find(job =>
+          ['ANALYZING', 'PROCESSING'].includes(job.status)
+        );
+
+        setHasActiveJob(!!activeJob);
+        if (activeJob) {
+          console.log('Active job in progress:', activeJob.job_id, activeJob.status);
+        }
+      } else {
+        // No jobs found
+        setAllJobs([]);
+        setDisplayedJobs([]);
+        setHasActiveJob(false);
+      }
+
+      setLoadingJobs(false);
+    } catch (error) {
+      console.error('Failed to refresh jobs:', error);
+      setLoadingJobs(false);
+    }
+  }, [auth.isAuthenticated, auth.user, GetUserJobsEndpoint, jobsToShow]);
 
   // FUNCTION: Session Recovery - Fetch user's active jobs on mount
   const recoverSession = useCallback(async () => {
