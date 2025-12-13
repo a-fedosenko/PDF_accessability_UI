@@ -54,7 +54,7 @@ function sanitizeFilename(filename, format = 'pdf') {
 }
 
 
-function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFilesAllowed, maxPagesAllowed, maxSizeAllowedMB, onUsageRefresh, setUsageCount, isFileUploaded, onShowDeploymentPopup}) {
+function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFilesAllowed, maxPagesAllowed, maxSizeAllowedMB, onUsageRefresh, setUsageCount, isFileUploaded, onShowDeploymentPopup, hasActiveJob = false}) {
   const auth = useAuth();
   const fileInputRef = useRef(null);
 
@@ -168,6 +168,13 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
   };
 
   const handleFileSelect = () => {
+    // Block upload if there's an active job
+    if (hasActiveJob) {
+      setErrorMessage('Please wait for your current job to complete before uploading a new file');
+      setOpenSnackbar(true);
+      return;
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.pdf';
@@ -452,6 +459,12 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
               </div>
             </div>
 
+            {hasActiveJob && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                You have a job currently processing. Please wait for it to complete before uploading a new file.
+              </Alert>
+            )}
+
             <div className="upload-instructions">
               <p className="upload-main-text">Drop your PDF here or click to browse</p>
             </div>
@@ -463,8 +476,8 @@ function UploadSection({ onUploadComplete, awsCredentials, currentUsage, maxFile
             )}
 
             <div className="upload-buttons">
-              <button className="upload-btn" onClick={handleFileSelect} disabled={isUploading}>
-                {isUploading ? 'Uploading...' : 'Upload PDF'}
+              <button className="upload-btn" onClick={handleFileSelect} disabled={isUploading || hasActiveJob}>
+                {hasActiveJob ? 'Processing Job Active' : isUploading ? 'Uploading...' : 'Upload PDF'}
               </button>
             </div>
           </div>

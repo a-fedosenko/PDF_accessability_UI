@@ -73,7 +73,8 @@ export const GetJobEndpoint = process.env.REACT_APP_GET_JOB_ENDPOINT;
 export const CreateJobEndpoint = process.env.REACT_APP_CREATE_JOB_ENDPOINT;
 export const AnalyzeJobEndpoint = process.env.REACT_APP_ANALYZE_JOB_ENDPOINT;
 export const StartProcessingEndpoint = process.env.REACT_APP_START_PROCESSING_ENDPOINT;
-export const CancelJobEndpoint = process.env.REACT_APP_CANCEL_JOB_ENDPOINT; // Will need to create this lambda
+export const CancelJobEndpoint = process.env.REACT_APP_CANCEL_JOB_ENDPOINT;
+export const DeleteJobEndpoint = process.env.REACT_APP_DELETE_JOB_ENDPOINT;
 
 // Feature Flags
 export const EnablePreAnalysis = process.env.REACT_APP_ENABLE_PRE_ANALYSIS === 'true';

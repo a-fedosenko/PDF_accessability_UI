@@ -16,6 +16,7 @@
     "@mui/material": "^6.3.1",
     "@testing-library/react": "^16.1.0",
     "country-state-city": "^3.2.1",
+    "date-fns": "^4.1.0",
     "framer-motion": "^11.16.4",
     "pdf-lib": "^1.17.1",
     "react": "^19.0.0",

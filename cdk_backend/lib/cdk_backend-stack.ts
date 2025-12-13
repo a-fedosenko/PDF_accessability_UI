@@ -511,6 +511,7 @@ export class CdkBackendStack extends cdk.Stack {
         'dynamodb:GetItem',
         'dynamodb:PutItem',
         'dynamodb:UpdateItem',
+        'dynamodb:DeleteItem',
         'dynamodb:Query',
         'lambda:InvokeFunction', // For invoking SplitPDF Lambda
       ],
@@ -538,6 +539,18 @@ export class CdkBackendStack extends cdk.Stack {
         effect: iam.Effect.ALLOW,
         actions: ['s3:GetObject'],
         resources: [`${pdfBucket.bucketArn}/*`],
+      }));
+    }
+
+    // Grant S3 delete and list permissions for deleteJob Lambda
+    if (pdfBucket) {
+      jobManagementLambdaRole.addToPolicy(new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['s3:DeleteObject', 's3:ListBucket'],
+        resources: [
+          `${pdfBucket.bucketArn}/*`,
+          pdfBucket.bucketArn,
+        ],
       }));
     }
 
@@ -616,6 +629,19 @@ export class CdkBackendStack extends cdk.Stack {
       role: jobManagementLambdaRole,
       environment: {
         JOBS_TABLE_NAME: jobsTable.tableName,
+      },
+    });
+
+    // Delete Job Lambda
+    const deleteJobLambda = new lambda.Function(this, 'DeleteJobLambda', {
+      runtime: lambda.Runtime.PYTHON_3_9,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda/deleteJob/'),
+      timeout: cdk.Duration.seconds(30),
+      role: jobManagementLambdaRole,
+      environment: {
+        JOBS_TABLE_NAME: jobsTable.tableName,
+        PDF_BUCKET: pdfBucket ? pdfBucket.bucketName : '',
       },
     });
 
@@ -722,6 +748,12 @@ export class CdkBackendStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.COGNITO,
     });
 
+    // DELETE /jobs/{job_id}
+    jobIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteJobLambda), {
+      authorizer: jobsAuthorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
     // Add Job Management API endpoints to Amplify environment variables
     mainBranch.addEnvironment('REACT_APP_GET_USER_JOBS_ENDPOINT', jobsApi.urlForPath('/jobs/my-jobs'));
     mainBranch.addEnvironment('REACT_APP_GET_JOB_ENDPOINT', jobsApi.urlForPath('/jobs'));
@@ -729,6 +761,7 @@ export class CdkBackendStack extends cdk.Stack {
     mainBranch.addEnvironment('REACT_APP_ANALYZE_JOB_ENDPOINT', jobsApi.urlForPath('/jobs/analyze'));
     mainBranch.addEnvironment('REACT_APP_START_PROCESSING_ENDPOINT', jobsApi.urlForPath('/jobs/start-processing'));
     mainBranch.addEnvironment('REACT_APP_CANCEL_JOB_ENDPOINT', jobsApi.urlForPath('/jobs/cancel'));
+    mainBranch.addEnvironment('REACT_APP_DELETE_JOB_ENDPOINT', jobsApi.urlForPath('/jobs'));
     mainBranch.addEnvironment('REACT_APP_ENABLE_PRE_ANALYSIS', 'true'); // Feature flag
 
     // --------------------------- Outputs ------------------------------
@@ -788,6 +821,11 @@ export class CdkBackendStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'CancelJobEndpoint', {
       value: jobsApi.urlForPath('/jobs/cancel'),
       description: 'Endpoint to cancel a job (POST)',
+    });
+
+    new cdk.CfnOutput(this, 'DeleteJobEndpoint', {
+      value: jobsApi.urlForPath('/jobs'),
+      description: 'Endpoint to delete a job (DELETE /jobs/{job_id})',
     });
 
 

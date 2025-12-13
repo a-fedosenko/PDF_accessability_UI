@@ -25,12 +25,14 @@ import {
   AnalyzeJobEndpoint,
   StartProcessingEndpoint,
   CancelJobEndpoint,
+  DeleteJobEndpoint,
   EnablePreAnalysis
 } from './utilities/constants';
 import CustomCredentialsProvider from './utilities/CustomCredentialsProvider';
 import DeploymentPopup from './components/DeploymentPopup';
 import { pollForAnalysis } from './utilities/analysisService';
 import FileActionsSection from './components/FileActionsSection';
+import JobHistoryTable from './components/JobHistoryTable';
 
 function MainApp({ isLoggingOut, setIsLoggingOut }) {
   const auth = useAuth();
@@ -73,6 +75,13 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
   // Session recovery state - track if we've already recovered
   const [sessionRecovered, setSessionRecovered] = useState(false);
+
+  // Job history state
+  const [allJobs, setAllJobs] = useState([]);
+  const [displayedJobs, setDisplayedJobs] = useState([]);
+  const [jobsToShow, setJobsToShow] = useState(5);
+  const [hasActiveJob, setHasActiveJob] = useState(false);
+  const [loadingJobs, setLoadingJobs] = useState(false);
 
 
   // Fetch credentials once user is authenticated
@@ -474,6 +483,166 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     setAnalysisData(null);
   };
 
+  // FUNCTION: Handle job selection from job history table
+  const handleSelectJob = useCallback((job, action) => {
+    console.log('Job selected:', job.job_id, 'Action:', action);
+    setCurrentJob(job);
+    setJobStatus(job.status);
+
+    switch (action) {
+      case 'resume':
+        // UPLOADED job - go to file-actions
+        setUploadedFile({
+          name: job.file_name,
+          updatedName: job.s3_key,
+          format: 'pdf',
+          jobId: job.job_id,
+          size: job.file_size_mb
+        });
+        setCurrentPage('file-actions');
+        break;
+
+      case 'view-analysis':
+        // ANALYSIS_COMPLETE - go to analysis results
+        setAnalysisData(job);
+        setCurrentPage('analysis-results');
+        break;
+
+      case 'start-processing':
+        // Start processing from ANALYSIS_COMPLETE
+        handleStartProcessingFromFileActions();
+        break;
+
+      case 'view-result':
+        // COMPLETED - go to results page
+        setUploadedFile({
+          name: job.file_name,
+          updatedName: job.s3_key,
+          format: 'pdf',
+          jobId: job.job_id
+        });
+        setProcessedResult({ url: job.processed_s3_key });
+        setCurrentPage('results');
+        break;
+
+      case 'download':
+        // COMPLETED - trigger download directly (handled by ResultsContainer)
+        handleSelectJob(job, 'view-result');
+        break;
+
+      case 'cancel':
+        // Cancel ANALYZING or PROCESSING job
+        handleCancelJob(job.job_id);
+        break;
+
+      case 'delete':
+        // This shouldn't be called directly - delete is handled separately
+        console.warn('Delete should be handled by handleDeleteJob');
+        break;
+
+      default:
+        console.warn('Unknown action:', action);
+    }
+  }, []);
+
+  // FUNCTION: Handle job cancellation from table
+  const handleCancelJob = async (jobId) => {
+    if (!CancelJobEndpoint) return;
+
+    try {
+      console.log('Canceling job:', jobId);
+
+      const response = await fetch(CancelJobEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${auth.user.id_token}`
+        },
+        body: JSON.stringify({
+          job_id: jobId,
+          status: 'CANCELLED'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel job');
+      }
+
+      // Update local job list
+      setAllJobs(prev => prev.map(j =>
+        j.job_id === jobId ? { ...j, status: 'CANCELLED' } : j
+      ));
+      setDisplayedJobs(prev => prev.map(j =>
+        j.job_id === jobId ? { ...j, status: 'CANCELLED' } : j
+      ));
+
+      // Re-check active jobs
+      checkForActiveJobs();
+
+      console.log('Job cancelled successfully');
+    } catch (error) {
+      console.error('Error canceling job:', error);
+    }
+  };
+
+  // FUNCTION: Handle job deletion
+  const handleDeleteJob = async (jobId) => {
+    if (!DeleteJobEndpoint) {
+      console.error('DeleteJobEndpoint not configured');
+      return;
+    }
+
+    try {
+      console.log('Deleting job:', jobId);
+
+      const response = await fetch(`${DeleteJobEndpoint}/${jobId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${auth.user.id_token}`
+        },
+        body: JSON.stringify({ cleanup_s3: true })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete job');
+      }
+
+      const result = await response.json();
+      console.log('Job deleted successfully:', result);
+
+      // Remove from local state
+      setAllJobs(prev => prev.filter(j => j.job_id !== jobId));
+      setDisplayedJobs(prev => prev.filter(j => j.job_id !== jobId));
+
+      // Update active job status
+      checkForActiveJobs();
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      throw error; // Re-throw so JobHistoryTable can handle it
+    }
+  };
+
+  // FUNCTION: Load more jobs
+  const handleLoadMoreJobs = () => {
+    const newCount = jobsToShow + 10;
+    setJobsToShow(newCount);
+    setDisplayedJobs(allJobs.slice(0, newCount));
+  };
+
+  // FUNCTION: Check if user has active jobs
+  const checkForActiveJobs = useCallback(() => {
+    const active = allJobs.some(job =>
+      ['ANALYZING', 'PROCESSING'].includes(job.status)
+    );
+    setHasActiveJob(active);
+  }, [allJobs]);
+
+  // Update active job check when allJobs changes
+  useEffect(() => {
+    checkForActiveJobs();
+  }, [allJobs, checkForActiveJobs]);
+
   // FUNCTION: Session Recovery - Fetch user's active jobs on mount
   const recoverSession = useCallback(async () => {
     if (!auth.isAuthenticated || !GetUserJobsEndpoint || sessionRecovered) return;
@@ -481,6 +650,8 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
     try {
       console.log('Recovering session - fetching user jobs...');
       setSessionRecovered(true);
+      setLoadingJobs(true);
+
       const response = await fetch(GetUserJobsEndpoint, {
         headers: {
           Authorization: `Bearer ${auth.user.id_token}`
@@ -489,6 +660,7 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
 
       if (!response.ok) {
         console.error('Failed to fetch user jobs:', response.statusText);
+        setLoadingJobs(false);
         return;
       }
 
@@ -496,42 +668,30 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
       console.log('User jobs fetched:', data);
 
       if (data.jobs && data.jobs.length > 0) {
-        // Get most recent active job (exclude CANCELLED, COMPLETED, FAILED)
+        // Store all jobs
+        setAllJobs(data.jobs);
+        setDisplayedJobs(data.jobs.slice(0, 5)); // Show first 5
+
+        // Check if there's an active job (ANALYZING or PROCESSING only)
         const activeJob = data.jobs.find(job =>
-          ['UPLOADED', 'ANALYZING', 'ANALYSIS_COMPLETE', 'PROCESSING'].includes(job.status)
+          ['ANALYZING', 'PROCESSING'].includes(job.status)
         );
 
         if (activeJob) {
-          console.log('Active job found:', activeJob);
-          setCurrentJob(activeJob);
-          setJobStatus(activeJob.status);
-
-          // Set UI page based on status
-          switch (activeJob.status) {
-            case 'UPLOADED':
-              setCurrentPage('file-actions');
-              break;
-            case 'ANALYZING':
-              setCurrentPage('analyzing');
-              startPollingJob(activeJob.job_id);
-              break;
-            case 'ANALYSIS_COMPLETE':
-              setAnalysisData(activeJob);
-              setCurrentPage('analysis-results');
-              break;
-            case 'PROCESSING':
-              setCurrentPage('processing');
-              startPollingJob(activeJob.job_id);
-              break;
-            default:
-              break;
-          }
+          setHasActiveJob(true);
+          console.log('Active job in progress:', activeJob.job_id, activeJob.status);
         }
+
+        // Always stay on upload page - no auto-navigation
+        setCurrentPage('upload');
       }
+
+      setLoadingJobs(false);
     } catch (error) {
       console.error('Session recovery failed:', error);
+      setLoadingJobs(false);
     }
-  }, [auth.isAuthenticated, auth.user, GetUserJobsEndpoint, startPollingJob, sessionRecovered]);
+  }, [auth.isAuthenticated, auth.user, GetUserJobsEndpoint, sessionRecovered]);
 
   // Session recovery on mount
   useEffect(() => {
@@ -600,18 +760,31 @@ function MainApp({ isLoggingOut, setIsLoggingOut }) {
           <Container maxWidth="lg" sx={{ marginTop: 0, padding: { xs: 0, sm: 1 } }}>
 
             {currentPage === 'upload' && (
-              <UploadSection
-                onUploadComplete={handleUploadComplete}
-                awsCredentials={awsCredentials}
-                currentUsage={usageCount}
-                maxFilesAllowed={maxFilesAllowed}
-                maxPagesAllowed={maxPagesAllowed}
-                maxSizeAllowedMB={maxSizeAllowedMB}
-                onUsageRefresh={refreshUsage}
-                setUsageCount={setUsageCount}
-                isFileUploaded={!!uploadedFile}
-                onShowDeploymentPopup={handleShowDeploymentPopup}
-              />
+              <>
+                <UploadSection
+                  onUploadComplete={handleUploadComplete}
+                  awsCredentials={awsCredentials}
+                  currentUsage={usageCount}
+                  maxFilesAllowed={maxFilesAllowed}
+                  maxPagesAllowed={maxPagesAllowed}
+                  maxSizeAllowedMB={maxSizeAllowedMB}
+                  onUsageRefresh={refreshUsage}
+                  setUsageCount={setUsageCount}
+                  isFileUploaded={!!uploadedFile}
+                  onShowDeploymentPopup={handleShowDeploymentPopup}
+                  hasActiveJob={hasActiveJob}
+                />
+
+                {/* Job History Table */}
+                <JobHistoryTable
+                  jobs={displayedJobs}
+                  onSelectJob={handleSelectJob}
+                  onDeleteJob={handleDeleteJob}
+                  onLoadMore={handleLoadMoreJobs}
+                  hasMore={displayedJobs.length < allJobs.length}
+                  loading={loadingJobs}
+                />
+              </>
             )}
 
             {currentPage === 'file-actions' && currentJob && (
